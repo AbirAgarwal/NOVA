@@ -1,17 +1,35 @@
 # ARSON Development Log
 
-## Day 1 - June 11, 2026
-
-### Completed
-- Created ARSON project
-- Installed and configured VS Code
-- Created virtual environment
-- Verified Python and Git
-- Created main.py
-- Added text-to-speech using pyttsx3
-- ARSON spoke for the first time
-
-### Next Goals
+## v0.1
 - Voice input
-- Speech recognition
-- Basic conversation system
+- Voice output
+- Basic responses
+
+## v0.2
+- Memory system
+- Fact storage
+- User name memory
+
+## v0.3
+- Open apps
+- Open websites
+- Google search
+- YouTube search
+
+## v0.4
+- Wake word
+- Time & date
+- Battery status
+- System information
+
+## v0.5
+- Ollama AI integration
+- Local AI brain
+
+## v0.6
+- Screenshot capture
+- Vision foundation
+- Webcam integration
+
+Known Issues:
+- MediaPipe hand tracking incompatible with Python 3.13 setup

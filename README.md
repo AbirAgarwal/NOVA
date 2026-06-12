@@ -1,13 +1,15 @@
-# ARSON AI
+ARSON
 
-ARSON is a local AI assistant built for personal use.
+Personal AI Operating Companion built in Python.
 
-## Features
-- Text-based interaction
-- Local execution on laptop
+Features:
+- Voice Assistant
+- AI Brain (Ollama)
+- Memory System
+- Automation
+- Screenshot Capture
+- System Monitoring
+- Wake Word Activation
 
-## Tech Stack
-- Python
-
-## Status
-Early development stage
+Status:
+Currently under active development.
