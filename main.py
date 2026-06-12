@@ -12,6 +12,13 @@ while True:
     if not text:
         continue
 
+    text = text.lower()
+    
+    if not text.startswith("arson"):
+        continue
+
+    text = text.replace("arson", "", 1).strip() 
+
     if text.lower() in ["exit", "quit", "stop"]:
         speak("Goodbye Abir")
         break
