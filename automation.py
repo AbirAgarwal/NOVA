@@ -92,4 +92,10 @@ def run_command(text):
 
         return f"CPU usage is {cpu} percent. Memory usage is {ram} percent."
     
+    elif "take screenshot" in text:
+        from vision import capture_screen
+
+        capture_screen()
+        return "Screenshot captured."
+
     return None
