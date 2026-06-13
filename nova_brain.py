@@ -1,6 +1,8 @@
 import json
 from ai_brain import get_ai_response
-
+from actions import open_youtube, open_google, open_github
+from actions import open_notepad, open_calculator
+from actions import open_vscode, take_screenshot
 MEMORY_FILE = "memory.json"
 
 
@@ -44,6 +46,27 @@ def get_response(text):
     if "what is my name" in text:
         return f"Your name is {memory['user'].get('name', 'unknown')}"
 
+    if "open youtube" in text:
+        return open_youtube()
+
+    if "open google" in text:
+        return open_google()
+    
+    if "open github" in text:
+        return open_github()
+    
+    if "open notepad" in text:
+        return open_notepad()
+
+    if "open calculator" in text:
+        return open_calculator()
+    
+    if "open vscode" in text or "open vs code" in text or "open versus code" in text or "open visual studio code" in text:
+        return open_vscode()
+    
+    if "take screenshot" in text:
+        return take_screenshot()
+    
     # 🧠 store facts
     if "remember that" in text:
         fact = text.replace("remember that", "").strip()

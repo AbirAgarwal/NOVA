@@ -1,0 +1,26 @@
+[14:32:23] NOVA: System activated.
+[14:32:34] You: hello Nova
+[14:32:34] NOVA: Hello abir. I am NOVA.
+[14:32:44] You: thank you Nova
+[14:32:50] NOVA: You're welcome! Let me know if there's anything else I can assist you with.
+[14:38:35] NOVA: System activated.
+[14:38:42] You: open YouTube
+[14:38:53] NOVA: Click the YouTube logo or search bar to open the app. On mobile, tap the app icon or use the search function.
+[14:39:05] You: Nova open
+[14:39:14] NOVA: I'm ready to help! Would you like me to open a specific application or provide assistance with something else?
+[14:39:26] You: Nova open Chrome
+[14:39:35] NOVA: I'm ready to help! On mobile, tap the Chrome app icon. On desktop, type "chrome" in the search bar.
+[14:40:01] You: Nova who is a CA
+[14:40:13] NOVA: I'm Abir, your personal AI operating companion. I help with tasks like opening apps, providing information, and assisting with daily activities. Let me know how I can assist you!
+[14:40:39] You: what is a pencil
+[14:40:51] NOVA: A pencil is a writing tool with a graphite core, used for drawing or writing. It consists of a wooden stick with a graphite stick and a eraser. Let me know if you need more details!
+[14:41:07] You: what is a pencil
+[14:41:17] NOVA: A pencil is a writing tool with a graphite core, used for drawing or writing. It consists of a wooden stick with a graphite stick and an eraser. Let me know if you need more details!
+[22:49:43] NOVA: System activated.
+[22:49:53] You: Nova open YouTube
+[22:49:53] NOVA: Opening YouTube
+[22:54:39] NOVA: System activated.
+[22:54:47] You: Nova open vs code
+[22:54:59] NOVA: Nova Open and code are distinct concepts. Nova Open refers to a specific platform or service, while code pertains to programming or software. I can assist with details about either, depending on your needs.
+[22:55:20] You: Nova open Notepad
+[22:55:21] NOVA: Opening Notepad

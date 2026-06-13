@@ -1,12 +1,12 @@
 import threading
 import tkinter as tk
+from datetime import datetime
 from nova_voice import speak
 from listen import listen
 from nova_brain import get_response
-from datetime import datetime
 
 root = tk.Tk()
-
+nova_running = False
 root.title("NOVA")
 root.geometry("900x600")
 root.configure(bg="black")
@@ -20,6 +20,16 @@ title = tk.Label(
     bg="black"
 )
 title.pack(pady=10)
+
+#Version
+version_label = tk.Label(
+    root,
+    text="v0.7",
+    font=("Arial",10),
+    fg="gray",
+    bg="black"
+)
+version_label.pack()
 
 # Status
 status_label = tk.Label(
@@ -56,7 +66,7 @@ def add_message(sender, message):
 
 def nova_loop():
 
-    while True:
+    while nova_running:
 
         status_label.config(text="Status: Listening 🎤")
 
@@ -80,7 +90,14 @@ def nova_loop():
         status_label.config(text="Status: Listening 🎤")
 
 def start_nova():
-
+    global nova_running
+    
+    if nova_running:
+        add_message("NOVA", "Already running.")
+        return
+    
+    nova_running = True
+    
     status_label.config(text="Status: Listening 🎤")
 
     add_message("NOVA", "System activated.")
@@ -94,8 +111,13 @@ def start_nova():
 
 
 def stop_nova():
+    global nova_running
+
+    nova_running = False
+
     status_label.config(text="Status: Offline")
-    chat_box.insert(tk.END, "\nNOVA stopped.\n")
+    
+    add_message("NOVA", "System stopped.")
 
 
 # Buttons
