@@ -212,6 +212,27 @@ def get_response(text):
     if "system info" in text:
         return get_system_info()
 
+    #=================
+    # CHAT HISTORY
+    #=================
+    if "chat history" in text:
+        return read_chat_history()
+    
+    if "generate calculator program" in text:
+        return generate_python_program(
+            "calculator.py",
+            "Create a calculator program"
+        )
+
+    if "improve file" in text:
+
+        filename = text.replace(
+            "improve file",
+            ""
+        ).strip()
+
+        return improve_python_file(filename)
+    
     # ======================
     # AI FALLBACK
     # ======================

@@ -211,3 +211,36 @@ def get_system_info():
         f"CPU usage is {cpu} percent. "
         f"Memory usage is {ram} percent."
     )
+
+def read_chat_history():
+
+    try:
+        with open("chat_history.txt", "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        recent = "".join(lines[-20:])
+
+        return recent
+
+    except:
+        return "No chat history found."
+
+def generate_python_program(filename, prompt):
+
+    from project_assistant import generate_code
+
+    code = generate_code(prompt)
+
+    if not filename.endswith(".py"):
+        filename += ".py"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(code)
+
+    return f"Generated {filename}"
+
+def improve_python_file(filename):
+
+    from code_editor import improve_file
+
+    return improve_file(filename)    

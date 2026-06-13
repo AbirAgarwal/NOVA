@@ -24,6 +24,10 @@ while True:
         break
 
     response = get_response(text)
+    
+    with open("chat_history.txt", "a", encoding="utf-8") as f:
+        f.write(f"You: {text}\n")
+        f.write(f"NOVA: {response}\n\n")
 
     print("NOVA:", response)
 

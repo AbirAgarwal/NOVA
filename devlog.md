@@ -1,48 +1,66 @@
 # NOVA Development Log
 
 ## v0.1
-- Voice input
-- Voice output
-- Basic responses
+
+* Basic voice assistant
+* Speech recognition added
+* Text-to-speech added
 
 ## v0.2
-- Memory system
-- Fact storage
-- User name memory
+
+* Added wake word support
+* Added local memory system
 
 ## v0.3
-- Open apps
-- Open websites
-- Google search
-- YouTube search
+
+* Added Ollama integration
+* Connected Qwen3 1.7B
 
 ## v0.4
-- Wake word
-- Time & date
-- Battery status
-- System information
+
+* Added GUI interface
+* Added status indicators
 
 ## v0.5
-- Ollama AI integration
-- Local AI brain
+
+* Added desktop automation
+* Open applications
+* Open websites
 
 ## v0.6
-- Screenshot capture
-- Vision foundation
-- Webcam integration
 
-Known Issues:
-- MediaPipe hand tracking incompatible with Python 3.13 setup
+* Added screenshot functionality
+* Added system monitoring
 
-# NOVA v0.6.1
+## v0.7
 
-Major Changes:
-- Renamed ARSON → NOVA
-- Added female voice
-- Added local AI brain (Ollama)
-- Added screenshot system
-- Added webcam foundation
-- Added system monitoring
+* Added file creation
+* Added folder creation
 
-Known Issues:
-- Gesture recognition blocked by MediaPipe/Python 3.13 compatibility
+## v0.8
+
+* Added Python project generator
+* Added project templates
+
+## v0.9
+
+* Added AI code generation
+* Added AI code improvement
+
+## v0.95
+
+* Added chat history logging
+* Added memory-aware AI
+
+## v1.0
+
+* Refactored architecture
+* Merged automation into actions.py
+* Added memory manager
+* Improved conversation handling
+* Improved project generation
+* Improved code assistant
+* Stable local AI desktop assistant release
+
+Status: Released
+Version: v1.0

@@ -1,4 +1,5 @@
 from ollama import chat
+from memory_manager import get_memory_context
 
 SYSTEM_PROMPT = """
 You are NOVA.
@@ -12,10 +13,22 @@ You are Abir's personal AI operating companion.
 conversation = [
     {"role": "system", "content": SYSTEM_PROMPT}
 ]
+
+
 def get_ai_response(user_text):
 
+    memory_context = get_memory_context()
+
+    conversation[0] = {
+        "role": "system",
+        "content": SYSTEM_PROMPT + "\n\n" + memory_context
+    }
+
     conversation.append(
-        {"role": "user", "content": user_text}
+        {
+            "role": "user",
+            "content": user_text
+        }
     )
 
     response = chat(
@@ -26,7 +39,10 @@ def get_ai_response(user_text):
     reply = response["message"]["content"]
 
     conversation.append(
-        {"role": "assistant", "content": reply}
+        {
+            "role": "assistant",
+            "content": reply
+        }
     )
 
     return reply
