@@ -1,7 +1,7 @@
 from ollama import chat
 
 SYSTEM_PROMPT = """
-You are ARSON.
+You are NOVA.
 
 Keep responses short and direct.
 Maximum 2 sentences unless explicitly asked for details.

@@ -30,7 +30,7 @@ def get_response(text):
 
     # 🧠 greeting
     if "hello" in text:
-        return f"Hello {name}. I am ARSON."
+        return f"Hello {name}. I am NOVA."
 
     # 🧠 store name
     if "my name is" in text:

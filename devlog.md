@@ -1,4 +1,4 @@
-# ARSON Development Log
+# NOVA Development Log
 
 ## v0.1
 - Voice input

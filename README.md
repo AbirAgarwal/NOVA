@@ -1,4 +1,4 @@
-ARSON
+NOVA
 
 Personal AI Operating Companion built in Python.
 
