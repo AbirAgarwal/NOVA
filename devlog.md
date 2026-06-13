@@ -33,3 +33,16 @@
 
 Known Issues:
 - MediaPipe hand tracking incompatible with Python 3.13 setup
+
+# NOVA v0.6.1
+
+Major Changes:
+- Renamed ARSON → NOVA
+- Added female voice
+- Added local AI brain (Ollama)
+- Added screenshot system
+- Added webcam foundation
+- Added system monitoring
+
+Known Issues:
+- Gesture recognition blocked by MediaPipe/Python 3.13 compatibility

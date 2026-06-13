@@ -1,4 +1,5 @@
 import json
+from ai_brain import get_ai_response
 
 MEMORY_FILE = "memory.json"
 
@@ -57,12 +58,11 @@ def get_response(text):
     if "what do you remember" in text:
         if not memory["facts"]:
             return "I don't remember anything yet."
-        recent = memory["facts"][-5:]
-        if not recent:
-            return "I don't remember anything yet."
 
+        recent = memory["facts"][-5:]
         formatted = "; ".join(recent)
+
         return f"You told me: {formatted}"
 
-    # default
-    return "I am still learning."
+    # If no command matches, use AI
+    return get_ai_response(text)
