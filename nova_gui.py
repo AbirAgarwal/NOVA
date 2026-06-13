@@ -1,5 +1,6 @@
 import threading
 import tkinter as tk
+import psutil
 from datetime import datetime
 from nova_voice import speak
 from listen import listen
@@ -40,6 +41,38 @@ status_label = tk.Label(
     bg="black"
 )
 status_label.pack()
+
+cpu_label = tk.Label(
+    root,
+    text="CPU: --%",
+    fg="lightgreen",
+    bg="black"
+)
+cpu_label.pack()
+
+ram_label = tk.Label(
+    root,
+    text="RAM: --%",
+    fg="lightgreen",
+    bg="black"
+)
+ram_label.pack()
+
+battery_label = tk.Label(
+    root,
+    text="Battery: --%",
+    fg="lightgreen",
+    bg="black"
+)
+battery_label.pack()
+
+time_label = tk.Label(
+    root,
+    text="Time: --:--",
+    fg="lightgreen",
+    bg="black"
+)
+time_label.pack()
 
 # Chat Area
 chat_box = tk.Text(
@@ -109,6 +142,27 @@ def start_nova():
         daemon=True
     ).start()
 
+def update_dashboard():
+
+    cpu = psutil.cpu_percent()
+
+    ram = psutil.virtual_memory().percent
+
+    battery = psutil.sensors_battery()
+
+    if battery:
+        battery_text = f"Battery: {battery.percent}%"
+    else:
+        battery_text = "Battery: N/A"
+
+    current_time = datetime.now().strftime("%I:%M:%S %p")
+
+    cpu_label.config(text=f"CPU: {cpu}%")
+    ram_label.config(text=f"RAM: {ram}%")
+    battery_label.config(text=battery_text)
+    time_label.config(text=f"Time: {current_time}")
+
+    root.after(2000, update_dashboard)
 
 def stop_nova():
     global nova_running
@@ -138,4 +192,5 @@ stop_button = tk.Button(
 )
 stop_button.pack(side="left", padx=10)
 
+update_dashboard()
 root.mainloop()

@@ -24,3 +24,14 @@
 [22:54:59] NOVA: Nova Open and code are distinct concepts. Nova Open refers to a specific platform or service, while code pertains to programming or software. I can assist with details about either, depending on your needs.
 [22:55:20] You: Nova open Notepad
 [22:55:21] NOVA: Opening Notepad
+[23:40:52] NOVA: System activated.
+[23:41:03] You: Nova open Chrome
+[23:41:03] NOVA: Opening Chrome
+[23:41:11] You: open download
+[23:41:22] NOVA: Please specify the file or link you want to open, and let me know if you need assistance with any particular aspect (e.g., formatting, compatibility).
+[23:41:35] You: open downloads
+[23:41:36] NOVA: Opening Downloads
+[23:41:54] You: battery status
+[23:41:54] NOVA: Battery is at 20 percent.
+[23:42:00] You: take screenshot
+[23:42:00] NOVA: Screenshot saved as screenshots/20260613_234200.png
