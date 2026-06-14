@@ -25,7 +25,7 @@ title.pack(pady=10)
 #Version
 version_label = tk.Label(
     root,
-    text="v0.7",
+    text="v1.2",
     font=("Arial",10),
     fg="gray",
     bg="black"

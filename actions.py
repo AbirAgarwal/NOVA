@@ -8,6 +8,7 @@ from datetime import datetime
 
 from vision import capture_screen
 
+from memory_manager import (get_dashboard, list_tasks)
 
 # ======================
 # WEBSITE ACTIONS
@@ -170,7 +171,9 @@ def create_python_project(project_name):
     with open(f"{folder}/requirements.txt", "w", encoding="utf-8"):
         pass
 
-    return f"Created Python project {project_name}"
+    os.startfile(folder)
+
+    return f"Created and opened Python project {project_name}"
 
 
 # ======================
@@ -243,4 +246,170 @@ def improve_python_file(filename):
 
     from code_editor import improve_file
 
-    return improve_file(filename)    
+    return improve_file(filename) 
+
+# ======================
+# WORKSPACE MODES
+# ======================
+
+def start_coding():
+
+    open_vscode()
+    open_github()
+    open_chrome()
+
+    return "Coding workspace ready."
+
+
+def hackathon_mode():
+
+    open_vscode()
+    open_github()
+    open_youtube()
+
+    return "Hackathon mode activated."
+
+
+def study_mode():
+
+    open_google()
+    open_youtube()
+
+    return "Study mode activated."  
+
+# ======================
+# PROJECT MANAGER
+# ======================
+
+def list_projects():
+
+    projects = []
+
+    for item in os.listdir():
+
+        if os.path.isdir(item):
+
+            has_main = os.path.exists(
+                os.path.join(item, "main.py")
+            )
+
+            has_readme = os.path.exists(
+                os.path.join(item, "README.md")
+            )
+
+            if has_main or has_readme:
+                projects.append(item)
+
+    if not projects:
+        return "No projects found."
+
+    return "Projects: " + ", ".join(projects)
+
+
+def open_project(project_name):
+
+    target = project_name.lower().replace(" ", "_")
+
+    for item in os.listdir():
+
+        if os.path.isdir(item):
+
+            if item.lower() == target:
+
+                os.startfile(item)
+
+                return f"Opening project {item}"
+
+    return "Project not found."
+
+def explain_python_file(filename):
+
+    from file_explainer import explain_file
+
+    return explain_file(filename)
+
+def generate_project_readme(project_name):
+
+    from readme_generator import generate_readme
+
+    content = generate_readme(project_name)
+
+    filename = f"{project_name.replace(' ', '_')}_README.md"
+
+    with open(
+        filename,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        f.write(content)
+
+    return f"Generated {filename}"
+
+def find_bugs_in_file(filename):
+
+    from bug_finder import find_bugs
+
+    return find_bugs(filename)
+
+def fix_python_file(filename):
+
+    from code_fixer import fix_file
+
+    return fix_file(filename)
+
+def start_project(project_name):
+
+    create_python_project(project_name)
+
+    try:
+        open_vscode()
+    except:
+        pass
+
+    
+    return f"Project workspace ready for {project_name}"
+
+
+def hackathon_setup():
+
+    open_vscode()
+    open_github()
+
+    webbrowser.open(
+        "https://chatgpt.com"
+    )
+
+    dashboard = get_dashboard()
+
+    return (
+        "Hackathon workspace ready. "
+        + dashboard
+    )
+
+
+def morning_briefing():
+
+    briefing = []
+
+    briefing.append("Good morning Abir.")
+
+    briefing.append(get_date())
+    briefing.append(get_time())
+
+    briefing.append(get_battery_status())
+
+    briefing.append(get_system_info())
+
+    dashboard = get_dashboard()
+
+    if dashboard:
+        briefing.append(dashboard)
+
+    tasks = list_tasks()
+
+    if tasks != "No tasks found.":
+        briefing.append("Today's tasks:")
+        briefing.append(tasks)
+
+    return "\n".join(briefing)

@@ -3,64 +3,82 @@
 ## v0.1
 
 * Basic voice assistant
-* Speech recognition added
-* Text-to-speech added
+* Speech recognition
+* Text-to-speech
 
 ## v0.2
 
-* Added wake word support
-* Added local memory system
+* Wake word support
+* Memory system
 
 ## v0.3
 
-* Added Ollama integration
-* Connected Qwen3 1.7B
+* Ollama integration
+* Qwen3 1.7B integration
 
 ## v0.4
 
-* Added GUI interface
-* Added status indicators
+* GUI added
+* Status indicators
 
 ## v0.5
 
-* Added desktop automation
-* Open applications
-* Open websites
+* Desktop automation
+* Application launching
 
 ## v0.6
 
-* Added screenshot functionality
-* Added system monitoring
+* Screenshot functionality
+* System monitoring
 
 ## v0.7
 
-* Added file creation
-* Added folder creation
+* File and folder creation
 
 ## v0.8
 
-* Added Python project generator
-* Added project templates
+* Python project generator
 
 ## v0.9
 
-* Added AI code generation
-* Added AI code improvement
+* AI code generation
+* AI code improvement
 
 ## v0.95
 
-* Added chat history logging
-* Added memory-aware AI
+* Chat history logging
+* Memory-aware AI
 
 ## v1.0
 
 * Refactored architecture
-* Merged automation into actions.py
-* Added memory manager
-* Improved conversation handling
+* Merged automation system
 * Improved project generation
-* Improved code assistant
-* Stable local AI desktop assistant release
+* Stable local AI release
 
-Status: Released
-Version: v1.0
+## v1.1
+
+* Skills system
+* Goals system
+* Notes system
+* Workspace modes
+* Morning briefing
+
+## v1.2
+
+* Task manager
+* Journal system
+* Project memory
+* Project notes
+* Project tracking
+* Delete operations for notes
+* Delete operations for journal entries
+* Delete operations for project notes
+* Improved memory manager
+* Better user profile system
+* Enhanced productivity tools
+
+Status: Stable
+
+Version: v1.2
+

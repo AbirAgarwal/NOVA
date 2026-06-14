@@ -1,8 +1,10 @@
 import json
-
 from ai_brain import get_ai_response
-
 from actions import *
+from memory_manager import *
+from actions import hackathon_setup
+from actions import morning_briefing
+
 
 MEMORY_FILE = "memory.json"
 
@@ -233,6 +235,298 @@ def get_response(text):
 
         return improve_python_file(filename)
     
+    if "start coding" in text:
+        return start_coding()
+
+    if "hackathon mode" in text:
+        return hackathon_mode()
+
+    if "study mode" in text:
+        return study_mode()
+    
+    
+    if "list project" in text or "list projects" in text:
+        return list_projects()
+
+
+    if "open project" in text:
+
+        project_name = text.replace(
+            "open project",
+            ""
+        ).strip()
+
+        return open_project(project_name)
+    
+    if "explain file" in text:
+
+        filename = text.replace(
+            "explain file",
+            ""
+        ).strip()
+
+        return explain_python_file(filename)
+    
+    if "generate readme for" in text or "generate read me for" in text:
+
+        project_name = text.replace(
+            "generate readme for",
+            ""
+        ).strip()
+
+        return generate_project_readme(
+            project_name
+        )
+    
+    if  ("find bug in file" in text or "find bugs in file" in text):
+
+        filename = text.replace(
+            "find bugs in file",
+            ""
+        ).strip()
+
+        return find_bugs_in_file(filename)
+    
+    if "fix file" in text:
+
+        filename = text.replace(
+            "fix file",
+            ""
+        ).strip()
+
+        return fix_python_file(filename)
+
+    if "add project" in text:
+
+        project = text.replace(
+            "add project",
+            ""
+        ).strip()
+
+        return add_project(project)
+
+    if "add skill" in text:
+
+        skill = text.replace(
+            "add skill",
+            ""
+        ).strip()
+
+        return add_skill(skill)
+
+    if "add goal" in text:
+
+        goal = text.replace(
+            "add goal",
+            ""
+        ).strip()
+
+        return add_goal(goal)
+
+    if ("list my project" in text or "list my projects" in text):
+        return list_projects_memory()
+
+    if ("list my skills" in text or "lis my skill" in text ):
+        return list_skills()
+
+    if ("list my goals" in text or "list my goal" in text) :
+        return list_goals()
+
+    if ("tell me about myself" in text or "who am i" in text):
+        return about_user()
+    
+    if "start project" in text:
+
+        project_name = text.replace(
+            "start project",
+            ""
+        ).strip()
+
+        return start_project(project_name)
+    
+    if "hackathon setup" in text:
+        return hackathon_setup()
+    
+    if "morning briefing" in text or "morning brief" in text:
+        return morning_briefing()
+
+    if "daily briefing" in text or "daily brief" in text:
+        return morning_briefing()
+    
+    if "save note" in text or "save notes" in text:
+
+        note = text.replace(
+            "save note",
+            ""
+        ).strip()
+
+        return add_note(note)
+    
+    if "show notes" in text or "show note" in text:
+        return list_notes()
+    
+    if "search notes" in text or "search note" in text:
+
+        keyword = text.replace(
+            "search notes",
+            ""
+        ).strip()
+
+        return search_notes(keyword)
+    
+    if "delete note" in text:
+
+        try:
+
+            number = int(
+                text.replace(
+                    "delete note",
+                    ""
+                ).strip()
+            )
+
+            return delete_note(number)
+
+        except:
+
+            return "Please provide a note number."
+        
+    if "add task" in text or "add tasks" in text:
+
+        task = text.replace(
+            "add task",
+            ""
+        ).strip()
+
+        return add_task(task)
+    
+    if "show tasks" in text or "show task" in text:
+        return list_tasks()
+
+    if "complete task" in text:
+
+        try:
+
+            number = int(
+                text.replace(
+                    "complete task",
+                    ""
+                ).strip()
+            )
+
+            return complete_task(number)
+
+        except:
+
+            return "Please provide a task number."
+        
+    if "delete task" in text:
+
+        try:
+
+            number = int(
+                text.replace(
+                    "delete task",
+                    ""
+                ).strip()
+            )
+
+            return delete_task(number)
+
+        except:
+
+            return "Please provide a task number."
+
+    if "project note" in text:
+
+        content = text.replace(
+            "project note",
+            ""
+        ).strip()
+
+        parts = content.split(" ", 1)
+
+        if len(parts) < 2:
+            return "Please provide project and note."
+
+        project = parts[0]
+        note = parts[1]
+
+        return add_project_note(
+            project,
+            note
+        )
+    
+    if "show project" in text:
+
+        project = text.replace(
+            "show project",
+            ""
+        ).strip()
+
+        return show_project(project)
+    
+    if "delete project note" in text:
+
+        try:
+
+            content = text.replace(
+                "delete project note",
+                ""
+            ).strip()
+
+            parts = content.split()
+
+            project = parts[0]
+
+            number = int(parts[1])
+
+            return delete_project_note(
+                project,
+                number
+            )
+
+        except:
+
+            return (
+                "Use: delete project note "
+                "project_name note_number"
+            )
+    
+    if "journal today" in text:
+
+        entry = text.replace(
+            "journal today",
+            ""
+        ).strip()
+
+        return add_journal_entry(entry)
+
+    if "show journal" in text:
+        return show_journal()
+
+    if "delete journal" in text:
+
+        try:
+
+            number = int(
+                text.replace(
+                    "delete journal",
+                    ""
+                ).strip()
+            )
+
+            return delete_journal_entry(
+                number
+            )
+
+        except:
+
+            return (
+                "Please provide "
+                "a journal number."
+            )
+
     # ======================
     # AI FALLBACK
     # ======================

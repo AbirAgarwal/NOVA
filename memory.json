@@ -1,13 +1,14 @@
 {
-  "user": {
-    "name": "Abir"
-  },
-
-  "facts": [
-    "you like cricket"
-  ],
-
-  "projects": [],
-  "goals": [],
-  "preferences": []
+    "user": {
+        "name": "Abir",
+        "preferences": {}
+    },
+    "facts": [],
+    "projects": [],
+    "skills": [],
+    "goals": [],
+    "notes": [],
+    "tasks": [],
+    "project_notes": {},
+    "journal": []
 }
