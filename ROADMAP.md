@@ -26,26 +26,19 @@
 
 ## NOVA v1.3
 
-[ ] Reminders
-
-[ ] Deadlines
-
-[ ] Better Project Tracking
-
-[ ] Daily Planning
+✓ OCR
+✓ Read Image
+✓ Read Screen
+✓ Screen Analysis
+[ ] Analyze Image
+[ ] Search Files
 
 ---
 
 ## NOVA v1.4
 
-[ ] OCR
-
-[ ] Vision AI
-
-[ ] Screen Understanding
-
-[ ] Read Text From Screenshots
-
+[ ] Project Workspace Memory
+[ ] Work On Project Agent
 ---
 
 ## NOVA v1.5

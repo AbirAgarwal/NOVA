@@ -500,3 +500,199 @@ The time is 01:08 PM
 Battery is at 30 percent.
 CPU usage is 9.7 percent. Memory usage is 73.0 percent.
 
+You: find file memory
+NOVA: .\memory.json
+.\memory_manager.py
+.\venv\Lib\site-packages\anyio\streams\memory.py
+.\venv\Lib\site-packages\anyio\streams\__pycache__\memory.cpython-313.pyc
+.\__pycache__\memory_manager.cpython-313.pyc
+
+You: open chrome
+NOVA: Opening Chrome
+
+You: open vs code
+NOVA: Opening Visual Studio Code
+
+You: open chrome and login
+NOVA: Opening Chrome
+
+You: open youtube
+NOVA: Opening YouTube
+
+You: open calculator
+NOVA: Opening Calculator
+
+You: k close calculator
+NOVA: I don't know how to close k  calculator
+
+You: 10 + 2
+NOVA: 10 + 2 = 12.
+
+You: close calculator
+NOVA: Closing calculator
+
+You: root 11
+NOVA: The square root of 11 is approximately 3.3166. It's an irrational number and cannot be simplified further.
+
+You: close
+NOVA: The square root of 11 is approximately 3.3166. It's an irrational number and cannot be simplified further. Would you like the decimal approximation or a different form?
+
+You: fz
+NOVA: Could you clarify if you meant to ask about the square root of 11 or another mathematical expression?
+
+You: open website credit.com
+NOVA: Opening https://credit.com
+
+You: ex
+NOVA: I'm here to listen and support. How can I assist you today?
+
+You: open website red.com
+NOVA: Opening https://red.com
+
+You: open website reddit.com
+NOVA: Opening https://reddit.com
+
+You: lock
+NOVA: Could you clarify what you mean by "lock"? I'd be happy to help secure your data or settings.
+
+You: lock
+NOVA: What do you mean by "lock"? Are you trying to lock a file or a door?
+
+You: lock computer
+NOVA: Locking computer.
+
+You: shutdown computer
+NOVA: Shutting down computer.
+
+You: shutdown pc
+NOVA: Are you sure you want to shut down the computer?
+
+You: no
+NOVA: Command cancelled.
+
+You: open spotify
+NOVA: Opening spotify
+
+You: emergency shutdown
+NOVA: Shutting down computer.
+
+You: launch coding workspace
+NOVA: Let's set up a coding workspace. First, install an editor like VS Code or Python. Then, create a new project directory and start writing your code. Would you like me to guide you through the steps?
+
+You: daily brief
+NOVA: Good morning Abir.
+Today is June 15, 2026
+The time is 11:19 PM
+Battery is at 68 percent.
+CPU usage is 7.0 percent. Memory usage is 52.0 percent.
+
+You: status report
+NOVA: Projects: 0
+Goals: 0
+Skills: 0
+Notes: 0
+Battery is at 67 percent.
+
+You: daily brief
+NOVA: Good morning Abir.
+Today is June 15, 2026
+The time is 11:27 PM
+Battery is at 65 percent.
+CPU usage is 10.4 percent. Memory usage is 51.7 percent.
+Projects: 0
+Goals: 0
+Skills: 0
+Notes: 0
+Battery is at 65 percent.
+
+[23:58:43] NOVA: System initialized.
+[23:58:43] NOVA: Ready for commands.
+[23:58:49] NOVA: System activated.
+[23:58:54] You: hello Nova
+[23:58:54] NOVA: Hello Abir. I am NOVA.
+[23:59:00] NOVA: Good morning Abir.
+Today is June 15, 2026
+The time is 11:58 PM
+Battery is at 55 percent.
+CPU usage is 13.4 percent. Memory usage is 52.8 percent.
+Projects: 0
+Goals: 0
+Skills: 0
+Notes: 0
+Tasks: 0
+[23:59:11] You: Nova daily brief
+[23:59:12] NOVA: Good morning Abir.
+Today is June 15, 2026
+The time is 11:59 PM
+Battery is at 55 percent.
+CPU usage is 12.0 percent. Memory usage is 52.7 percent.
+Projects: 0
+Goals: 0
+Skills: 0
+Notes: 0
+Tasks: 0
+[23:59:15] NOVA: Projects: 0
+Goals: 0
+Skills: 0
+Notes: 0
+Tasks: 0
+[23:59:18] NOVA: No projects found.
+[23:59:32] NOVA: 1. Manage daily tasks like reminders, schedule updates, and message sending.  
+2. Assist with work-related tasks such as task tracking, research, and productivity tools.
+[23:59:42] NOVA: 1. Manage daily tasks like reminders, schedule updates, and message sending.  
+2. Assist with work-related tasks such as task tracking, research, and productivity tools.
+[00:00:02] NOVA: 1. Manage daily tasks like reminders, schedule updates, and message sending.  
+2. Assist with work-related tasks such as task tracking, research, and productivity tools.  
+3. Help with personal organization, goal setting, and communication tasks.
+[00:00:02] You: novelist task
+[00:00:07] NOVA: System stopped.
+[00:00:09] NOVA: System activated.
+[00:00:15] NOVA: 1. Brainstorm plot ideas, develop characters, and outline story structure.  
+2. Write drafts, edit for clarity, and revise to refine the narrative.
+[00:00:15] You: Nova list tas
+[00:00:20] NOVA: System stopped.
+[00:03:16] NOVA: System initialized.
+[00:03:16] NOVA: Ready for commands.
+[00:03:27] NOVA: System activated.
+[00:03:33] You: Nova show task
+[00:03:33] NOVA: No tasks found.
+You: 
+NOVA: Hello! How can I assist you today? Let me know what you need help with.
+
+You: list project
+NOVA: No projects found.
+
+[00:23:40] NOVA: System initialized.
+[00:23:40] NOVA: Ready for commands.
+[00:31:56] NOVA: System initialized.
+[00:31:56] NOVA: Ready for commands.
+[00:35:44] NOVA: System initialized.
+[00:35:44] NOVA: Ready for commands.
+[00:35:48] NOVA: System activated.
+[00:36:04] You: Nova exit
+[00:36:11] NOVA: You can exit by typing "exit" or closing the window. Let me know if you need further assistance!
+[00:48:31] NOVA: System initialized.
+[00:48:31] NOVA: Ready for commands.
+[00:48:56] NOVA: System activated.
+[00:49:04] You: good morning na
+[00:49:13] NOVA: Good morning! How can I assist you today?
+[00:54:18] NOVA: System initialized.
+[00:54:18] NOVA: Ready for commands.
+[00:54:28] NOVA: Hotkey activated.
+[00:54:33] You: hello Innova
+[00:54:33] NOVA: Hello Abir. I am NOVA.
+[00:54:44] NOVA: Hotkey activated.
+[00:55:12] NOVA: System initialized.
+[00:55:12] NOVA: Ready for commands.
+[00:55:13] NOVA: Hotkey activated.
+[00:55:17] You: do you know
+You: status report
+NOVA: Projects: 0
+Goals: 0
+Skills: 0
+Notes: 0
+Tasks: 0
+
+[01:19:22] NOVA: System initialized.
+[01:19:22] NOVA: Ready for commands.
+[01:19:36] NOVA: System activated.

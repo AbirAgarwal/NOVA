@@ -1,5 +1,5 @@
 import json
-
+from plyer import notification
 MEMORY_FILE = "memory.json"
 
 
@@ -37,6 +37,19 @@ def load_memory():
 
     return memory
 
+def show_notification(title, message):
+
+    try:
+
+        notification.notify(
+            title=title,
+            message=message,
+            timeout=5
+        )
+
+    except:
+
+        pass
 
 def save_memory(memory):
 
@@ -75,6 +88,10 @@ def add_project(project):
     if project not in memory["projects"]:
         memory["projects"].append(project)
         save_memory(memory)
+        show_notification(
+    "NOVA",
+    f"Project added: {project}"
+)
 
     return f"Project added: {project}"
 
@@ -121,6 +138,10 @@ def add_goal(goal):
     if goal not in memory["goals"]:
         memory["goals"].append(goal)
         save_memory(memory)
+        show_notification(
+    "NOVA",
+    f"Goal added: {goal}"
+)
 
     return f"Goal added: {goal}"
 
@@ -144,6 +165,10 @@ def add_note(note):
     memory["notes"].append(note)
 
     save_memory(memory)
+    show_notification(
+    "NOVA",
+    "Note saved"
+)
 
     return "Note saved."
 
@@ -215,8 +240,9 @@ def add_task(task):
     )
 
     save_memory(memory)
+    show_notification("NOVA", f"Task added:{task}")
 
-    return "Task added."
+    return f"Task added: {task}"
 
 
 def list_tasks():
@@ -298,6 +324,49 @@ def get_dashboard():
 
     return result
 
+def get_stats():
+
+    memory = load_memory()
+
+    projects = len(
+        memory.get("projects", [])
+    )
+
+    tasks = len(
+        memory.get("tasks", [])
+    )
+
+    goals = len(
+        memory.get("goals", [])
+    )
+
+    skills = len(
+        memory.get("skills", [])
+    )
+
+    notes = len(
+        memory.get("notes", [])
+    )
+
+    journal = len(
+        memory.get("journal", [])
+    )
+
+    return {
+
+        "projects": projects,
+
+        "tasks": tasks,
+
+        "goals": goals,
+
+        "skills": skills,
+
+        "notes": notes,
+
+        "journal": journal
+
+    }
 
 def about_user():
 
@@ -466,3 +535,67 @@ def delete_journal_entry(index):
     save_memory(memory)
 
     return f"Deleted journal entry: {removed}"
+
+
+def daily_plan():
+
+    memory = load_memory()
+
+    tasks = memory.get("tasks", [])
+    goals = memory.get("goals", [])
+    projects = memory.get("projects", [])
+
+    result = []
+
+    if tasks:
+
+        result.append(
+            f"You have {len(tasks)} task(s)."
+        )
+
+        result.append("\nTop Tasks:")
+
+        for task in tasks[:5]:
+
+            result.append(
+                f"- {task}"
+            )
+
+    if goals:
+
+        result.append("\nActive Goals:")
+
+        for goal in goals[:3]:
+
+            result.append(
+                f"- {goal}"
+            )
+
+    if projects:
+
+        result.append("\nProjects:")
+
+        for project in projects[:3]:
+
+            result.append(
+                f"- {project}"
+            )
+
+    if not result:
+
+        return (
+            "You currently have no "
+            "tasks, goals, or projects."
+        )
+
+    return "\n".join(result)
+
+def add_journal_entry(entry):
+
+    memory = load_memory()
+
+    memory["journal"].append(entry)
+
+    save_memory(memory)
+
+    return "Journal entry saved."

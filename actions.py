@@ -2,12 +2,9 @@ import os
 import webbrowser
 import subprocess
 import psutil
-
 from urllib.parse import quote
 from datetime import datetime
-
 from vision import capture_screen
-
 from memory_manager import (get_dashboard, list_tasks)
 
 # ======================
@@ -42,6 +39,18 @@ def search_youtube(query):
     )
     return f"Searching YouTube for {query}"
 
+def open_website(url):
+
+    url = url.strip()
+
+    if not url.startswith(
+        ("http://", "https://")
+    ):
+        url = "https://" + url
+
+    webbrowser.open(url)
+
+    return f"Opening {url}"
 
 # ======================
 # APPLICATION ACTIONS
@@ -370,6 +379,66 @@ def start_project(project_name):
     
     return f"Project workspace ready for {project_name}"
 
+def work_on_project(project_name):
+
+    project_folder = (
+        project_name
+        .lower()
+        .replace(" ", "_")
+    )
+
+    # Open VS Code
+
+    try:
+        open_vscode()
+    except:
+        pass
+
+    # Open project folder
+
+    try:
+        open_project(project_folder)
+    except:
+        pass
+
+    # Open github
+
+    try:
+        open_github()
+    except:
+        pass
+
+    # Open README
+
+    readme = (
+        f"{project_folder}/README.md"
+    )
+
+    if os.path.exists(readme):
+
+        try:
+            os.startfile(readme)
+        except:
+            pass
+
+    # Open roadmap
+
+    roadmap = (
+        f"{project_folder}/roadmap.md"
+    )
+
+    if os.path.exists(roadmap):
+
+        try:
+            os.startfile(roadmap)
+        except:
+            pass
+
+    return (
+        f"Project workspace ready "
+        f"for {project_name}"
+    )
+
 
 def hackathon_setup():
 
@@ -401,16 +470,7 @@ def morning_briefing():
 
     briefing.append(get_system_info())
 
-    dashboard = get_dashboard()
-
-    if dashboard:
-        briefing.append(dashboard)
-
-    tasks = list_tasks()
-
-    if tasks != "No tasks found.":
-        briefing.append("Today's tasks:")
-        briefing.append(tasks)
+    briefing.append(status_report())
 
     return "\n".join(briefing)
 
@@ -441,3 +501,183 @@ def analyze_current_screen():
     image = capture_screen()
 
     return analyze_screen(image)
+
+# ======================
+# FILE SEARCH
+# ======================
+
+def search_files(keyword):
+
+    from file_search import find_file
+
+    return find_file(keyword)
+
+def open_file_by_name(keyword):
+
+    from file_search import open_file
+
+    return open_file(keyword)
+
+# ======================
+# CLOSE APPLICATIONS
+# ======================
+
+def close_app(app_name):
+    processes = {
+        "chrome": "chrome.exe",
+        "google chrome": "chrome.exe",
+        "browser": "chrome.exe",
+        "website": "chrome.exe",
+        "vscode": "Code.exe",
+        "vs code": "Code.exe",
+        "notepad": "notepad.exe",
+        "calculator": "CalculatorApp.exe"
+    }
+
+    app_name = app_name.lower().strip()
+
+    if app_name in processes:
+
+        os.system(
+            f'taskkill /F /IM "{processes[app_name]}"'
+        )
+
+        return f"Closing {app_name}"
+
+    return f"I don't know how to close {app_name}"
+
+def open_folder_by_name(keyword):
+
+    from file_search import open_folder
+
+    return open_folder(keyword)
+
+# ======================
+# SYSTEM CONTROL
+# ======================
+
+def lock_computer():
+
+    os.system(
+        "rundll32.exe user32.dll,LockWorkStation"
+    )
+
+    return "Locking computer."
+
+def volume_up():
+
+    for _ in range(10):
+        os.system(
+            "powershell (New-Object -ComObject WScript.Shell).SendKeys([char]175)"
+        )
+
+    return "Volume increased."
+
+
+def volume_down():
+
+    for _ in range(10):
+        os.system(
+            "powershell (New-Object -ComObject WScript.Shell).SendKeys([char]174)"
+        )
+
+    return "Volume decreased."
+
+
+def mute_volume():
+
+    os.system(
+        "powershell (New-Object -ComObject WScript.Shell).SendKeys([char]173)"
+    )
+
+    return "Volume muted."
+
+def shutdown_pc():
+
+    os.system("shutdown /s /t 0")
+
+    return "Shutting down computer."
+
+
+def restart_pc():
+
+    os.system("shutdown /r /t 0")
+
+    return "Restarting computer."
+
+
+def sleep_pc():
+
+    os.system(
+        "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
+    )
+
+    return "Putting computer to sleep."
+
+def open_any_app(app_name):
+
+    from app_launcher import open_app
+
+    return open_app(app_name)
+
+def status_report():
+
+    from memory_manager import (
+        get_stats
+    )
+
+    stats = get_stats()
+
+    report = []
+
+    report.append(
+        f"Projects: {stats['projects']}"
+    )
+
+    report.append(
+        f"Goals: {stats['goals']}"
+    )
+
+    report.append(
+        f"Skills: {stats['skills']}"
+    )
+
+    report.append(
+        f"Notes: {stats['notes']}"
+    )
+
+    report.append(
+       f"Tasks: {stats['tasks']}"
+    )
+
+    return "\n".join(report)
+
+def end_of_day_review():
+
+    from memory_manager import (
+        load_memory
+    )
+
+    memory = load_memory()
+
+    tasks = len(
+        memory.get("tasks", [])
+    )
+
+    goals = len(
+        memory.get("goals", [])
+    )
+
+    projects = len(
+        memory.get("projects", [])
+    )
+
+    return (
+        f"End of Day Review\n\n"
+        f"Tasks: {tasks}\n"
+        f"Goals: {goals}\n"
+        f"Projects: {projects}\n\n"
+        f"What did you accomplish today?"
+    )
+
+

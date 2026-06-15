@@ -29,15 +29,46 @@ def save_memory(memory):
 
 
 memory = load_memory()
+pending_action = None
 
 
 def get_response(text):
 
     global memory
+    global pending_action
 
     text = text.lower()
 
     name = memory["user"].get("name", "Abir")
+
+    # ======================
+    # CONFIRMATION SYSTEM
+    # ======================
+
+    if pending_action:
+
+        if text in [
+            "yes",
+            "confirm",
+            "do it",
+            "proceed"
+        ]:
+
+            action = pending_action
+
+            pending_action = None
+
+            return action()
+
+        elif text in [
+            "no",
+            "cancel",
+            "stop"
+        ]:
+
+            pending_action = None
+
+            return "Command cancelled."
 
     # ======================
     # MEMORY COMMANDS
@@ -117,6 +148,19 @@ def get_response(text):
     # ======================
     # APPLICATION COMMANDS
     # ======================
+
+    if "open " in text:
+
+        app_name = text.replace(
+            "open",
+            ""
+        ).strip()
+
+        result = open_any_app(app_name)
+
+        if result != "Application not found.":
+
+            return result
 
     if "open chrome" in text:
         return open_chrome()
@@ -251,10 +295,7 @@ def get_response(text):
 
     if "open project" in text:
 
-        project_name = text.replace(
-            "open project",
-            ""
-        ).strip()
+        project_name = text.replace( "open project", "" ).strip()
 
         return open_project(project_name)
     
@@ -548,6 +589,119 @@ def get_response(text):
 
     if "analyze my screen" in text or "analyse my screen" in text:
         return analyze_current_screen()
+    
+    if "find file" in text:
+
+        keyword = text.replace(
+            "find file",
+            ""
+        ).strip()
+
+        return search_files(keyword)
+    
+    if ( "open file" in text or "open files" in text or "open the file" in text ):
+
+        keyword = text.replace(
+            "open file",
+            ""
+        ).strip()
+
+        return open_file_by_name(keyword)
+
+    if "close " in text:
+
+        app_name = text.replace(
+            "close",
+            ""
+        ).strip()
+
+        return close_app(app_name)
+    
+    if "open website" in text:
+
+        website = text.replace(
+            "open website",
+            ""
+        ).strip()
+
+        return open_website(website)
+
+    if "open folder" in text:
+
+        keyword = text.replace(
+            "open folder",
+            ""
+        ).strip()
+
+        return open_folder_by_name(keyword)
+    
+    if ( "lock computer" in text or "lock pc" in text ):
+
+        pending_action = lock_computer
+
+        return (
+            "Are you sure you want "
+            "to lock the computer?"
+        )
+
+    if "volume up" in text:
+        return volume_up()
+
+    if "volume down" in text:
+        return volume_down()
+
+    if "mute" in text:
+        return mute_volume()
+
+    if "shutdown pc" in text or "shutdown computer" in text:
+
+        pending_action = shutdown_pc
+
+        return (
+            "Are you sure you want "
+            "to shut down the computer?"
+        )
+
+
+    if "restart pc" in text or "restart computer" in text:
+
+        pending_action = restart_pc
+
+        return (
+            "Are you sure you want "
+            "to restart the computer?"
+        )
+
+
+    if "sleep pc" in text or "sleep computer" in text:
+
+        pending_action = sleep_pc
+
+        return (
+            "Are you sure you want "
+            "to put the computer to sleep?"
+        )
+    
+    if ( "emergency shutdown" in text or "force shutdown" in text ):
+        return shutdown_pc()
+
+    if ( "emergency lock" in text or "lock now" in text ):
+        return lock_computer()
+    
+    if ( "work on" in text or "continue project" in text ):
+
+        project_name = ( text.replace("work on", "").replace("continue project","").strip())
+
+        return work_on_project(project_name)
+    
+    if ( "status report" in text or "dashboard" in text ):
+        return status_report()
+    
+    if ( "what should i do today" in text or "daily plan" in text ):
+        return daily_plan()
+    
+    if ( "end of day review" in text or "daily review" in text ):
+        return end_of_day_review()
 
     # ======================
     # AI FALLBACK
