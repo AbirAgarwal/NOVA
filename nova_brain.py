@@ -526,6 +526,28 @@ def get_response(text):
                 "Please provide "
                 "a journal number."
             )
+        
+    # ======================
+    # OCR COMMANDS
+    # ======================
+
+    if "read image" in text:
+
+        filename = text.replace(
+            "read image",
+            ""
+        ).strip()
+
+        return read_image_text(filename)
+    
+    if "read my screen" in text:
+        return read_current_screen()
+
+    if "what is on my screen" in text:
+        return analyze_current_screen()
+
+    if "analyze my screen" in text or "analyse my screen" in text:
+        return analyze_current_screen()
 
     # ======================
     # AI FALLBACK

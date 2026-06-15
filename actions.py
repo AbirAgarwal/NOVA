@@ -413,3 +413,31 @@ def morning_briefing():
         briefing.append(tasks)
 
     return "\n".join(briefing)
+
+# ======================
+# OCR READER
+# ======================
+
+def read_image_text(filename):
+
+    from ocr_reader import read_text_from_image
+
+    return read_text_from_image(filename)
+
+def read_current_screen():
+
+    from vision import capture_screen
+    from ocr_reader import read_text_from_image
+
+    image = capture_screen()
+
+    return read_text_from_image(image)
+
+def analyze_current_screen():
+
+    from vision import capture_screen
+    from screen_analyzer import analyze_screen
+
+    image = capture_screen()
+
+    return analyze_screen(image)

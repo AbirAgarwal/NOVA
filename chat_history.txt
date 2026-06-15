@@ -277,3 +277,226 @@ NOVA: Project: nova
 You: delete project nova
 NOVA: I cannot delete projects directly. Let me know if you'd like help with tasks related to "Nova" or another project.
 
+You: read my screen
+NOVA: NOVA
+
+ill
+nN
+
+EXPLORER
+
+NOVA
+
+> _pycache_ e
+> screenshots
+
+> venv
+
+.gitignore
+
+® actions.py M
+® ai_brain.py
+
+® bug_finder.py
+
+® calculator.py
+
+= chat_history.txt
+
+® code _editor.py
+
+® code _fixer.py
+ deviog.md
+
+® file_explainer.py
+
+® listen.py
+
+® main.py
+
+P@oeves oaGés
+
+ memory_manager.py
+{} memory,json
+
+® nova_brain.py M
+® nova_guipy
+
+@ nova_voice.py
+
+® ocr_reader.py U
+® project_assistant.py
+® readme_generator.py
+
+@ README.md
+ ROADMAP.md
+® vision.py
+
+8 > OUTLINE
+> TIMELINE
+
+X  $mainx S
+
+@o0Ao
+
+® nova_brain.py > © get_response
+34 def get_response(text):
+
+5314 # OCR COMMANDS.
+
+532} #5
+
+533 /
+
+534} if "read image" in text:
+
+535 /
+
+536 / filename = text.replace(
+
+537 i “read image",
+
+538 i =
+
+539 / ).strip()
+
+540
+
+541 ; return read_image_text(file
+
+542}
+
+543 / if "read my screen" in text:
+
+544 / return read_current_screen(
+j F
+
+545 /
+
+546 # =
+
+547 # AI FALLBACK
+
+548 # =
+
+549
+
+558 return get_ai_response(text) |
+
+551
+
+doy
+
+oo F)
+
+Python: main 2
+
+ents\NOVA> tesseract --version
+dException
+
+(venv) PS C:\Users\Abir Agarwal\OneDrive\Docum
+
+ents\NOVA> python main.py
+NOVA ONLINE
+Listening...
+You: no I read my screen
+Listening...
+You: Nova read my screen
+
+Ln 544,Col9 Spaces:4 _ UTF-8
+
+W-|o x
+
+(venv) PS C:\Users\Abir Agarwal\OneDrive\Docum
+
+CRLF
+
+® nova _brainpyM X  ¥ ROADMAP Dy %
+
+coooa - (a) x
+
+{} Python
+
+res]
+
+Ct
+
+Build with Agent
+
+Al responses may
+be inaccurate
+Generate Agent
+Instructions to
+onboard Al onto your
+codebase.
+
++ © nova_brainpy
+
++ 1 O
+
+(2) (L. © De...
+
+venv (3.13.14final.0)
+
+Q
+
+© Nova = Oo
+= + Upgrade G
+“” Python OD Run
+
+return read_current_screen()
+
+This will let you say:
+
+Nova read my screen io)
+
+and NOVA will:
+
+Screenshot oe
+
++
+
+OCR
+
++
+
+Read text aloud
+
+which is the first real Vision Al feature for v1.3.
+
+ObGVLB
+
+For pip install tesseract pillow it's showing fatal
+error in launcher
+The system cannot find the file
+
+That error usually means your virtual environment's pip launcher is
+broken or Python's path changed.
+
+Ask anything
+
++ Instantv Q fa) r
+
+ChatGPT can make mistakes. Check important info.
+
+Vv
+
+You: exact
+NOVA: I am Abir's personal AI operating companion, designed to assist with tasks, provide support, and offer guidance. Let me know how I can help!
+
+You: analyse my
+NOVA: You're currently feeling [emotion], which is normal. Let me know if you'd like help managing or expressing this sentiment.
+
+You: analyse my screen
+NOVA: Your screen activity is showing [emotion], which is normal. Let me know if you'd like help analyzing battery life, app usage, or screen time.
+
+You: analyse my screen
+NOVA: The user is viewing a terminal window with a mix of text and file paths, including Python scripts and system commands. The text contains commands like `read_image`, `analyze_current_screen`, and `get_ai_response`, suggesting an AI-driven screen analysis tool. The system is showing a terminal interface with potential code execution and file management tasks.
+
+You: daily brief
+NOVA: Good morning Abir.
+Today is June 15, 2026
+The time is 01:08 PM
+Battery is at 30 percent.
+CPU usage is 9.7 percent. Memory usage is 73.0 percent.
+
