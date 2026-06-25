@@ -4,7 +4,7 @@ from actions import *
 from memory_manager import *
 from actions import hackathon_setup
 from actions import morning_briefing
-
+from gui_controller import *
 
 MEMORY_FILE = "memory.json"
 
@@ -68,7 +68,6 @@ def get_response(text):
 
             pending_action = None
 
-            return "Command cancelled."
 
     # ======================
     # MEMORY COMMANDS
@@ -702,6 +701,23 @@ def get_response(text):
     
     if ( "end of day review" in text or "daily review" in text ):
         return end_of_day_review()
+    
+    if (
+        "hide yourself" in text or "go to tray" in text or "minimize yourself" in text or "hide nova" in text ):
+        
+        return minimize_nova()
+
+    if ("show yourself" in text or "restore window" in text or "show nova" in text or "open nova" in text):
+        
+        return restore_nova()
+    
+    if (
+        "exit nova" in text
+        or "close nova" in text
+        or "shutdown nova" in text
+        or "terminate nova" in text
+    ):
+        return "EXIT_NOVA"
 
     # ======================
     # AI FALLBACK

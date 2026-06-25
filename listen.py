@@ -14,7 +14,7 @@ def listen():
             audio = recognizer.listen(
                 source,
                 timeout=None,
-                phrase_time_limit=4
+                phrase_time_limit=6
             )
         except:
             return ""

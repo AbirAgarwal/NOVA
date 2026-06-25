@@ -9,18 +9,20 @@ from memory_manager import get_stats,show_notification
 import pystray
 from PIL import Image
 import keyboard
+import gui_controller
+
+
 
 # ======================
-
 # WINDOW
-
 # ======================
-
 root = tk.Tk()
 
+gui_controller.GUI_ROOT = root
+root.iconbitmap("nova_icon.ico")
 root.title("NOVA")
-root.geometry("1000x650")
-root.configure(bg="black")
+root.geometry("1200x800")
+root.configure(bg="#0a0f1f")
 
 nova_running = False
 
@@ -31,11 +33,11 @@ nova_running = False
 # ======================
 
 title = tk.Label(
-root,
-text="NOVA",
-font=("Arial", 28, "bold"),
-fg="cyan",
-bg="black"
+    root,
+    text="◉ NOVA CORE",
+    font=("Segoe UI", 30, "bold"),
+    fg="#00ffff",
+    bg="#0a0f1f"
 )
 
 title.pack(pady=10)
@@ -45,7 +47,7 @@ root,
 text="v1.4",
 font=("Arial", 10),
 fg="gray",
-bg="black"
+bg="#0a0f1f"
 )
 
 version_label.pack()
@@ -59,12 +61,50 @@ version_label.pack()
 status_label = tk.Label(
 root,
 text="Status: Online",
-font=("Arial", 12),
+font=("Segoe UI", 11),
 fg="white",
-bg="black"
+bg="#0a0f1f"
 )
 
 status_label.pack(pady=5)
+
+# =====================
+
+# CORE
+
+# ======================
+
+core_label = tk.Label(
+    root,
+    text="⬤",
+    font=("Segoe UI",60),
+    fg="#00ffff",
+    bg="#0a0f1f"
+)
+
+core_label.pack()
+pulse = True
+current_status_color = "#00ffff"
+
+def animate_core():
+
+    global pulse
+
+    if pulse:
+        core_label.config(
+            fg=current_status_color
+        )
+    else:
+        core_label.config(
+            fg="#203050"
+        )
+
+    pulse = not pulse
+
+    root.after(
+        600,
+        animate_core
+    )
 
 # ======================
 
@@ -73,8 +113,10 @@ status_label.pack(pady=5)
 # ======================
 
 dashboard_frame = tk.Frame(
-root,
-bg="black"
+    root,
+    bg="#121826",
+    highlightbackground="#00ffff",
+    highlightthickness=1
 )
 
 dashboard_frame.pack(pady=10)
@@ -83,7 +125,7 @@ cpu_label = tk.Label(
 dashboard_frame,
 text="CPU: --%",
 fg="lightgreen",
-bg="black"
+bg="#0a0f1f"
 )
 
 cpu_label.pack(
@@ -95,7 +137,7 @@ ram_label = tk.Label(
 dashboard_frame,
 text="RAM: --%",
 fg="lightgreen",
-bg="black"
+bg="#0a0f1f"
 )
 
 ram_label.pack(
@@ -107,7 +149,7 @@ battery_label = tk.Label(
 dashboard_frame,
 text="Battery: --%",
 fg="lightgreen",
-bg="black"
+bg="#0a0f1f"
 )
 
 battery_label.pack(
@@ -119,7 +161,7 @@ time_label = tk.Label(
 dashboard_frame,
 text="Time: --:--",
 fg="lightgreen",
-bg="black"
+bg="#0a0f1f"
 )
 
 time_label.pack(
@@ -133,9 +175,9 @@ padx=20
 
 memory_frame = tk.Frame(
     root,
-    bg="#111111",
-    bd=2,
-    relief="ridge"
+    bg="#121826",
+    highlightbackground="#00ffff",
+    highlightthickness=1
 )
 
 memory_frame.pack(
@@ -204,6 +246,16 @@ journal_label.pack(
     padx=15
 )
 
+terminal_label = tk.Label(
+    root,
+    text="SYSTEM TERMINAL",
+    font=("Consolas",10,"bold"),
+    fg="#00ffff",
+    bg="#0a0f1f"
+)
+
+terminal_label.pack()
+
 # ======================
 
 # QUICK ACTIONS
@@ -212,7 +264,7 @@ journal_label.pack(
 
 quick_frame = tk.Frame(
 root,
-bg="black"
+bg="#0a0f1f"
 )
 
 quick_frame.pack(pady=5)
@@ -265,51 +317,6 @@ tk.Button(
     )
 ).pack(side="left", padx=5)
 
-main_frame = tk.Frame(
-    root,
-    bg="black"
-)
-
-main_frame.pack(
-    fill="both",
-    expand=True
-)
-
-# ======================
-
-# CHAT AREA
-
-# ======================
-
-chat_box = tk.Text(
-root,
-bg="#111111",
-fg="white",
-font=("Consolas", 12),
-wrap="word"
-)
-
-chat_box.pack(
-    fill="both",
-    expand=True,
-    padx=20,
-    pady=20
-    )
-
-chat_box.tag_config(
-"nova",
-foreground="cyan"
-)
-
-chat_box.tag_config(
-"user",
-foreground="lightgreen"
-)
-
-chat_box.config(
-state="disabled"
-)
-
 # ======================
 
 # CHAT FUNCTIONS
@@ -327,7 +334,7 @@ def add_message(sender, message):
 
         chat_box.insert(
             tk.END,
-            f"\n🤖 NOVA: {message}\n",
+            f"\n[NOVA] ► {message}\n",
             "nova"
         )
 
@@ -335,7 +342,7 @@ def add_message(sender, message):
 
         chat_box.insert(
             tk.END,
-            f"\n🧑 You: {message}\n",
+            f"\n[USER] ► {message}\n",
             "user"
         )
 
@@ -368,12 +375,11 @@ def add_message(sender, message):
 
 def nova_loop():
 
+    global nova_running
 
     while nova_running:
 
-        status_label.config(
-            text="Status: Listening 🎤"
-        )
+        set_status("listening")
 
         text = listen()
 
@@ -385,28 +391,41 @@ def nova_loop():
             text
         )
 
-        status_label.config(
-            text="Status: Thinking 🧠"
-        )
+        set_status("thinking")
 
-        response = get_response(
-            text
-        )
+        response = get_response(text)
+
+        # Voice Exit
+        if response == "EXIT_NOVA":
+
+            add_message(
+                "NOVA",
+                "Shutting down."
+            )
+
+            set_status("offline")
+
+            speak(
+                "Shutting down"
+            )
+
+            root.after(
+                0,
+                quit_app
+            )
+
+            break
 
         add_message(
             "NOVA",
             response
         )
 
-        status_label.config(
-            text="Status: Speaking 🔊"
-        )
+        set_status("speaking")
 
         speak(response)
 
-        status_label.config(
-            text="Status: Listening 🎤"
-        )
+        set_status("listening")
 
 
 # ======================
@@ -455,9 +474,7 @@ def stop_nova():
 
     nova_running = False
 
-    status_label.config(
-        text="Status: Offline"
-    )
+    set_status("offline")
 
     add_message(
         "NOVA",
@@ -494,11 +511,7 @@ def quit_app(icon=None, item=None):
 
 def create_tray():
     print("Creating tray icon...")
-    image = Image.new(
-        "RGB",
-        (64, 64),
-        color="cyan"
-    )
+    image = Image.open("nova_icon.ico")
 
     menu = pystray.Menu(
 
@@ -639,12 +652,36 @@ def hotkey_listen():
     )
 
 keyboard.add_hotkey(
-    "space",
+    "ctrl+n",
     lambda: threading.Thread(
         target=hotkey_listen,
         daemon=True
     ).start()
 )
+
+current_status_color = "#00ffff"
+
+def set_status(mode):
+
+    global current_status_color
+
+    colors = {
+        "online":"#00ff9d",
+        "listening":"#00ffff",
+        "thinking":"#f1c40f",
+        "speaking":"#9b59b6",
+        "offline":"#e74c3c"
+    }
+
+    current_status_color = colors.get(
+        mode,
+        "white"
+    )
+
+    status_label.config(
+        text=f"● {mode.upper()}",
+        fg=current_status_color
+    )
 
 # ======================
 # DASHBOARD UPDATE
@@ -656,7 +693,10 @@ def update_dashboard():
 
     ram = psutil.virtual_memory().percent
 
-    battery = psutil.sensors_battery()
+    try:
+        battery = psutil.sensors_battery()
+    except:
+        battery = None
 
     if battery:
 
@@ -715,50 +755,97 @@ def update_dashboard():
         update_dashboard
     )
 
-
 # ======================
 # BUTTONS
 # ======================
 
 button_frame = tk.Frame(
-root,
-bg="black"
+    root,
+    bg="#0a0f1f"
 )
 
 button_frame.pack(pady=10)
 
+
 start_button = tk.Button(
-button_frame,
-text="Start",
-command=start_nova
+    button_frame,
+    text="▶ START",
+    command=start_nova,
+    bg="#00b894",
+    fg="white",
+    font=("Segoe UI",10,"bold"),
+    bd=0,
+    padx=20,
+    pady=8
 )
 
-start_button.pack(
-side="left",
-padx=10
-)
+start_button.pack(side="left", padx=10)
 
 stop_button = tk.Button(
-button_frame,
-text="Stop",
-command=stop_nova
+    button_frame,
+    text="■ STOP",
+    command=stop_nova,
+    bg="#e74c3c",
+    fg="white",
+    font=("Segoe UI",10,"bold"),
+    bd=0,
+    padx=20,
+    pady=8
 )
 
-stop_button.pack(
-side="left",
-padx=10
-)
+stop_button.pack(side="left", padx=10)
 
 tray_button = tk.Button(
     button_frame,
-    text="Hide To Tray",
-    command=minimize_to_tray
+    text="⬇ TRAY",
+    command=minimize_to_tray,
+    bg="#34495e",
+    fg="white",
+    font=("Segoe UI",10,"bold"),
+    bd=0,
+    padx=20,
+    pady=8
 )
 
-tray_button.pack(
-    side="left",
-    padx=10
+tray_button.pack(side="left", padx=10)
+
+# ======================
+
+# CHAT AREA
+
+# ======================
+
+chat_box = tk.Text(
+    root,
+    bg="#121826",
+    fg="white",
+    font=("Segoe UI", 11),
+    wrap="word",
+    bd=0,
+    insertbackground="white"
 )
+
+chat_box.pack(
+    fill="both",
+    expand=True,
+    padx=20,
+    pady=(5,20)
+    )
+
+chat_box.tag_config(
+"nova",
+foreground="cyan"
+)
+
+chat_box.tag_config(
+"user",
+foreground="lightgreen"
+)
+
+chat_box.config(
+state="disabled"
+)
+
 
 # ======================
 # STARTUP
@@ -774,12 +861,16 @@ add_message(
 "Ready for commands."
 )
 
+animate_core()
+
 update_dashboard()
 
 root.protocol(
     "WM_DELETE_WINDOW",
     root.destroy
 )
+print("Before mainloop")
+
 
 root.mainloop()
 
