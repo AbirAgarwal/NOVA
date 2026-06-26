@@ -35,6 +35,7 @@ def get_ai_response(user_text):
             "content": user_text
         }
     )
+    
 
     response = chat(
         model="qwen3:4b",
@@ -49,7 +50,9 @@ def get_ai_response(user_text):
             "content": reply
         }
     )
-
+    # Keep only recent conversation
+    if len(conversation) > 60:
+        conversation[:] = [conversation[0]] + conversation[-59:]
     return reply
 
 def stream_ai_response(user_text):
@@ -90,3 +93,5 @@ def stream_ai_response(user_text):
             "content": full_reply
         }
     )
+    if len(conversation) > 60:
+        conversation[:] = [conversation[0]] + conversation[-59:]

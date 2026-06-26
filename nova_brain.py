@@ -1,9 +1,7 @@
 import json
 from ai_brain import get_ai_response
-from actions import *
 from memory_manager import *
-from actions import hackathon_setup
-from actions import morning_briefing
+from actions import *
 from gui_controller import *
 
 MEMORY_FILE = "memory.json"
