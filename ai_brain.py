@@ -1,5 +1,9 @@
-from ollama import chat
+from groq import Groq
 from memory_manager import get_memory_context
+import os
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+AI_MODEL = "llama3-8b-8192"  # Fast Groq model - change to llama3-70b-8192 for better quality
 
 SYSTEM_PROMPT = """
 You are NOVA, Abir's personal AI operating companion.
@@ -15,15 +19,14 @@ Rules:
 - Keep replies under 3 sentences unless detailed explanations are requested.
 """
 
-# Faster default model — change via set_ai_model() or in the GUI
-AI_MODEL = "qwen3:1.8b"
-
 conversation = [
     {"role": "system", "content": SYSTEM_PROMPT}
 ]
 
+client = Groq(api_key=GROQ_API_KEY)
 
-def set_ai_model(model_name):
+
+def set_ai_model(model_name: str):
     global AI_MODEL
     AI_MODEL = model_name
 
@@ -44,12 +47,14 @@ def get_ai_response(user_text):
         }
     )
 
-    response = chat(
+    response = client.chat.completions.create(
         model=AI_MODEL,
-        messages=conversation
+        messages=conversation,
+        temperature=0.7,
+        max_tokens=500
     )
 
-    reply = response["message"]["content"]
+    reply = response.choices[0].message.content
 
     conversation.append(
         {
@@ -79,21 +84,21 @@ def stream_ai_response(user_text):
         }
     )
 
-    stream = chat(
+    stream = client.chat.completions.create(
         model=AI_MODEL,
         messages=conversation,
-        stream=True
+        stream=True,
+        temperature=0.7,
+        max_tokens=500
     )
 
     full_reply = ""
 
     for chunk in stream:
-
-        content = chunk["message"]["content"]
-
-        full_reply += content
-
-        yield content
+        content = chunk.choices[0].delta.content
+        if content:
+            full_reply += content
+            yield content
 
     conversation.append(
         {
