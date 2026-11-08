@@ -8,6 +8,8 @@ import sys
 import os
 import threading
 import math
+import time
+import requests
 from datetime import datetime
 
 from PySide6.QtWidgets import (
@@ -70,6 +72,87 @@ class NovaWorker(QThread):
             self.finished.emit(full_reply)
         except Exception as exc:
             self.error.emit(str(exc))
+
+
+class LocationWeatherWorker(QThread):
+    """Fetch real location and weather data from free APIs."""
+    location_updated = Signal(str, str)  # city, country
+    weather_updated = Signal(str, str)   # temp, condition
+
+    def __init__(self):
+        super().__init__()
+        self._running = True
+
+    def run(self):
+        while self._running:
+            try:
+                # Get location from IP
+                resp = requests.get("https://ipapi.co/json/", timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    city = data.get("city", "Unknown")
+                    country = data.get("country_name", "Unknown")
+                    lat = data.get("latitude")
+                    lon = data.get("longitude")
+                    self.location_updated.emit(city, country)
+
+                    # Get weather from Open-Meteo (free, no API key)
+                    if lat and lon:
+                        weather_resp = requests.get(
+                            f"https://api.open-meteo.com/v1/forecast?"
+                            f"latitude={lat}&longitude={lon}"
+                            f"&current_weather=true",
+                            timeout=10
+                        )
+                        if weather_resp.status_code == 200:
+                            wdata = weather_resp.json()
+                            current = wdata.get("current_weather", {})
+                            temp = current.get("temperature", "?")
+                            condition = current.get("weathercode", 0)
+                            weather_text = self._weather_code_to_text(condition)
+                            self.weather_updated.emit(f"{temp}°C", weather_text)
+            except Exception as exc:
+                print(f"Location/Weather error: {exc}")
+
+            self._running = False  # Run once, then stop (will be restarted by timer)
+            break
+
+    def _weather_code_to_text(self, code: int) -> str:
+        """Convert WMO weather code to text."""
+        codes = {
+            0: "Clear sky",
+            1: "Mainly clear",
+            2: "Partly cloudy",
+            3: "Overcast",
+            45: "Foggy",
+            48: "Depositing rime fog",
+            51: "Light drizzle",
+            53: "Moderate drizzle",
+            55: "Heavy drizzle",
+            56: "Light freezing drizzle",
+            57: "Heavy freezing drizzle",
+            61: "Light rain",
+            63: "Moderate rain",
+            65: "Heavy rain",
+            66: "Light freezing rain",
+            67: "Heavy freezing rain",
+            71: "Light snow",
+            73: "Moderate snow",
+            75: "Heavy snow",
+            77: "Snow grains",
+            80: "Light rain showers",
+            81: "Moderate rain showers",
+            82: "Heavy rain showers",
+            85: "Light snow showers",
+            86: "Heavy snow showers",
+            95: "Thunderstorm",
+            96: "Thunderstorm with hail",
+            99: "Thunderstorm with heavy hail",
+        }
+        return codes.get(code, "Unknown")
+
+    def stop(self):
+        self._running = False
 
 
 # ======================
@@ -628,10 +711,18 @@ class JarvisWindow(QMainWindow):
         right_layout.addWidget(cpu_panel)
 
         loc_panel = HoloPanel("LOCATION")
-        self.loc_text = QLabel("Detecting...")
-        self.loc_text.setStyleSheet("color: #e6f0ff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
-        self.loc_text.setAlignment(Qt.AlignCenter)
-        loc_panel.addWidget(self.loc_text)
+        self.loc_city = QLabel("Detecting...")
+        self.loc_city.setStyleSheet("color: #e6f0ff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.loc_city.setAlignment(Qt.AlignCenter)
+        loc_panel.addWidget(self.loc_city)
+        self.loc_country = QLabel("")
+        self.loc_country.setStyleSheet("color: #a8b3cf; font-size: 10px; font-family: 'Consolas', monospace;")
+        self.loc_country.setAlignment(Qt.AlignCenter)
+        loc_panel.addWidget(self.loc_country)
+        loc_pin = QLabel("📍")
+        loc_pin.setStyleSheet("color: #00ffff; font-size: 16px;")
+        loc_pin.setAlignment(Qt.AlignCenter)
+        loc_panel.addWidget(loc_pin)
         right_layout.addWidget(loc_panel)
 
         weather_panel = HoloPanel("WEATHER")
@@ -640,9 +731,12 @@ class JarvisWindow(QMainWindow):
         weather_icon.setStyleSheet("font-size: 32px; color: #f1c40f;")
         weather_inner.addWidget(weather_icon)
         weather_inner.addStretch()
-        weather_temp = QLabel("72°F")
-        weather_temp.setStyleSheet("color: #00ffff; font-size: 14px; font-weight: bold; font-family: 'Consolas', monospace;")
-        weather_inner.addWidget(weather_temp)
+        self.weather_temp = QLabel("--°C")
+        self.weather_temp.setStyleSheet("color: #00ffff; font-size: 14px; font-weight: bold; font-family: 'Consolas', monospace;")
+        weather_inner.addWidget(self.weather_temp)
+        self.weather_condition = QLabel("--")
+        self.weather_condition.setStyleSheet("color: #a8b3cf; font-size: 10px; font-family: 'Consolas', monospace;")
+        weather_inner.addWidget(self.weather_condition)
         weather_panel.addWidget(QLabel())
         weather_panel.layout().addLayout(weather_inner)
         right_layout.addWidget(weather_panel)
@@ -930,6 +1024,12 @@ class JarvisWindow(QMainWindow):
         self.wave_timer.start(150)
         self._wave_state = 0
 
+        # Location and weather update timer
+        self.loc_weather_timer = QTimer(self)
+        self.loc_weather_timer.timeout.connect(self._start_location_weather)
+        self.loc_weather_timer.start(300000)  # Update every 5 minutes
+        self._start_location_weather()  # Fetch immediately on startup
+
     def _animate_wave(self):
         states = ["▁▃▅▇▅▃▁", "▁▂▃▄▅▆▇", "▇▆▅▄▃▂▁", "▁▃▅▇▅▃▁"]
         self._wave_state = (self._wave_state + 1) % len(states)
@@ -953,6 +1053,23 @@ class JarvisWindow(QMainWindow):
             self.date_label.setText(now.strftime("%A %d %b %Y").upper())
         except Exception:
             pass
+
+    def _start_location_weather(self):
+        """Start location and weather fetch in background thread."""
+        self._loc_worker = LocationWeatherWorker()
+        self._loc_worker.location_updated.connect(self._on_location_updated)
+        self._loc_worker.weather_updated.connect(self._on_weather_updated)
+        self._loc_worker.start()
+
+    def _on_location_updated(self, city: str, country: str):
+        """Update location labels."""
+        self.loc_city.setText(city)
+        self.loc_country.setText(country)
+
+    def _on_weather_updated(self, temp: str, condition: str):
+        """Update weather labels."""
+        self.weather_temp.setText(temp)
+        self.weather_condition.setText(condition)
 
     def _register_hotkey(self):
         try:
