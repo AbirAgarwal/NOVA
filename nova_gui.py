@@ -8,7 +8,7 @@ from datetime import datetime
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QFrame, QSizePolicy, QScrollArea,
-    QProgressBar, QGridLayout
+    QProgressBar, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import (
     Qt, QTimer, QPropertyAnimation, QEasingCurve, QPoint, QRect,
@@ -27,22 +27,19 @@ import gui_controller
 
 
 # ======================
-# JARVIS COLOR PALETTE
+# JARVIS COLOR PALETTE — Exact match to reference image
 # ======================
 
-BG_DARK = QColor(8, 12, 24)           # Deep dark blue-black
-PANEL = QColor(15, 25, 45, 200)       # Glass panel
-PANEL_DARK = QColor(10, 18, 35, 180)
+BG_DARK = QColor(8, 12, 20)           # Deep dark blue-black background
+PANEL_BG = QColor(12, 18, 30, 180)    # Glass panel background
+PANEL_BORDER = QColor(0, 255, 255, 80) # Cyan border
+PANEL_INNER = QColor(0, 255, 255, 20)  # Inner glow
 ACCENT = QColor(0, 255, 255)          # Cyan neon
-ACCENT_DIM = QColor(0, 150, 200)      # Dim cyan
-TEXT = QColor(220, 230, 255)          # Off white-blue
-TEXT_DIM = QColor(140, 160, 190)      # Gray-blue
-GLOW = QColor(0, 255, 255, 40)        # Cyan glow
+ACCENT_DIM = QColor(0, 130, 170)      # Dim cyan
+TEXT = QColor(220, 235, 255)          # Off white-blue
+TEXT_DIM = QColor(130, 150, 180)      # Gray-blue
 SUCCESS = QColor(0, 255, 157)
-THINKING = QColor(241, 196, 15)
-SPEAKING = QColor(155, 89, 182)
 OFFLINE = QColor(231, 76, 60)
-ONLINE = QColor(0, 255, 157)
 
 
 # ======================
@@ -70,80 +67,43 @@ class NovaWorker(QThread):
 
 
 # ======================
-# HUD PANEL BASE
-# ======================
-
-class HudPanel(QFrame):
-    """A Jarvis HUD panel with title and glass styling."""
-
-    def __init__(self, title: str, parent=None):
-        super().__init__(parent)
-        self.setStyleSheet("""
-            QFrame {
-                background: rgba(15, 25, 45, 160);
-                border: 1px solid rgba(0, 255, 255, 30);
-                border-radius: 8px;
-            }
-        """)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 8)
-        layout.setSpacing(6)
-
-        self.title_lbl = QLabel(title)
-        self.title_lbl.setStyleSheet("color: #00ffff; font-size: 11px; font-weight: bold; letter-spacing: 1px; font-family: 'Consolas', monospace;")
-        layout.addWidget(self.title_lbl)
-
-        self.content = QWidget()
-        self.content_layout = QVBoxLayout(self.content)
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(4)
-        layout.addWidget(self.content)
-
-    def add_widget(self, widget):
-        self.content_layout.addWidget(widget)
-
-
-# ======================
-# PROGRESS BAR ROW
+# STAT ROW — Label + Progress Bar (JARVIS style)
 # ======================
 
 class StatRow(QWidget):
-    """A label + progress bar row like in JARVIS."""
-
     def __init__(self, label: str, color=ACCENT):
         super().__init__()
-        self.setFixedHeight(20)
+        self.setFixedHeight(24)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
+        layout.setSpacing(8)
 
         self.lbl = QLabel(label)
-        self.lbl.setStyleSheet(f"color: #a8b3cf; font-size: 10px; font-family: 'Consolas', monospace;")
-        self.lbl.setFixedWidth(55)
+        self.lbl.setStyleSheet(f"color: #a8b3cf; font-size: 11px; font-family: 'Consolas', monospace;")
+        self.lbl.setFixedWidth(60)
         layout.addWidget(self.lbl)
 
         self.bar = QProgressBar()
         self.bar.setRange(0, 100)
         self.bar.setValue(0)
         self.bar.setTextVisible(False)
-        self.bar.setFixedHeight(6)
+        self.bar.setFixedHeight(5)
         self.bar.setStyleSheet(f"""
             QProgressBar {{
                 background: rgba(255, 255, 255, 10);
                 border: none;
-                border-radius: 3px;
+                border-radius: 2px;
             }}
             QProgressBar::chunk {{
                 background: {color.name()};
-                border-radius: 3px;
+                border-radius: 2px;
             }}
         """)
         layout.addWidget(self.bar)
 
         self.val_lbl = QLabel("0%")
-        self.val_lbl.setStyleSheet(f"color: {color.name()}; font-size: 10px; font-family: 'Consolas', monospace;")
-        self.val_lbl.setFixedWidth(30)
+        self.val_lbl.setStyleSheet(f"color: {color.name()}; font-size: 11px; font-family: 'Consolas', monospace;")
+        self.val_lbl.setFixedWidth(32)
         layout.addWidget(self.val_lbl)
 
     def set_value(self, pct: int):
@@ -152,12 +112,137 @@ class StatRow(QWidget):
 
 
 # ======================
-# CIRCULAR RADAR (Center)
+# GLASS PANEL — JARVIS style with inner border
+# ======================
+
+class GlassPanel(QFrame):
+    def __init__(self, title: str = "", parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setStyleSheet("""
+            QFrame {
+                background: rgba(12, 18, 30, 170);
+                border: 1px solid rgba(0, 255, 255, 50);
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(6)
+        if title:
+            title_lbl = QLabel(title)
+            title_lbl.setStyleSheet("color: #00ffff; font-size: 11px; font-weight: bold; letter-spacing: 1px; font-family: 'Consolas', monospace;")
+            layout.addWidget(title_lbl)
+        self.content_layout = layout
+
+
+# ======================
+# HOLOGRAPHIC HEAD
+# ======================
+
+class HoloHead(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self._angle = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._animate)
+        self._timer.start(40)
+
+    def _animate(self):
+        self._angle = (self._angle + 1.5) % 360
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        w, h = self.width(), self.height()
+        cx, cy = w // 2, h // 2
+        c = ACCENT
+
+        painter.setPen(QPen(c, 2))
+        painter.setBrush(Qt.NoBrush)
+
+        r = min(w, h) // 2 - 8
+        painter.drawEllipse(cx - r, cy - r - 5, r * 2, r * 2)
+
+        painter.setPen(QPen(c, 1))
+        painter.drawEllipse(cx - r // 2.5, cy - r // 3, 6, 6)
+        painter.drawEllipse(cx + r // 2.5 - 6, cy - r // 3, 6, 6)
+        painter.drawLine(cx, cy - r // 4, cx, cy + r // 6)
+        painter.drawArc(cx - r // 4, cy + r // 6, r // 2, r // 6, 0, 180 * 16)
+
+        painter.setPen(QPen(QColor(0, 255, 255, 100), 2))
+        for i in range(8):
+            ang = math.radians(self._angle + i * 45)
+            px = cx + int((r + 15) * math.cos(ang))
+            py = cy + int((r + 15) * math.sin(ang) * 0.6)
+            painter.drawEllipse(px - 2, py - 2, 4, 4)
+
+
+# ======================
+# HOLOGRAPHIC CAR
+# ======================
+
+class HoloCar(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self._angle = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._animate)
+        self._timer.start(50)
+
+    def _animate(self):
+        self._angle = (self._angle + 1) % 360
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        w, h = self.width(), self.height()
+        cx, cy = w // 2, h // 2
+        c = ACCENT
+
+        painter.setPen(QPen(c, 2))
+        painter.setBrush(Qt.NoBrush)
+
+        bw, bh = min(w, h) - 15, min(w, h) // 2 + 5
+        points = [
+            (cx - bw // 2, cy + bh // 4),
+            (cx - bw // 2, cy - bh // 4),
+            (cx - bw // 4, cy - bh // 2),
+            (cx + bw // 4, cy - bh // 2),
+            (cx + bw // 2, cy - bh // 4),
+            (cx + bw // 2, cy + bh // 4),
+        ]
+        path = QPainterPath()
+        path.moveTo(*points[0])
+        for p in points[1:]:
+            path.lineTo(*p)
+        path.closeSubpath()
+        painter.drawPath(path)
+
+        painter.drawEllipse(cx - bw // 3, cy + bh // 4 - 6, 12, 12)
+        painter.drawEllipse(cx + bw // 3 - 12, cy + bh // 4 - 6, 12, 12)
+
+        painter.setPen(QPen(QColor(0, 255, 255, 60), 1))
+        win_path = QPainterPath()
+        win_path.moveTo(cx - bw // 5, cy - bh // 3)
+        win_path.lineTo(cx - bw // 5, cy - bh // 5)
+        win_path.lineTo(cx + bw // 5, cy - bh // 5)
+        win_path.lineTo(cx + bw // 5, cy - bh // 3)
+        win_path.closeSubpath()
+        painter.drawPath(win_path)
+
+
+# ======================
+# CIRCULAR RADAR — Large center display
 # ======================
 
 class RadarDisplay(QWidget):
-    """Large circular radar/scan display like JARVIS center."""
-
     def __init__(self):
         super().__init__()
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -182,14 +267,15 @@ class RadarDisplay(QWidget):
         c = ACCENT
         c_dim = QColor(0, 255, 255, 60)
 
+        r_outer = min(cx, cy) - 6
+
         # Outer ring
         painter.setPen(QPen(c, 2))
         painter.setBrush(Qt.NoBrush)
-        r_outer = min(cx, cy) - 10
         painter.drawEllipse(cx - r_outer, cy - r_outer, r_outer * 2, r_outer * 2)
 
         # Inner rings
-        for r in [r_outer * 0.7, r_outer * 0.4]:
+        for r in [r_outer * 0.65, r_outer * 0.35]:
             painter.setPen(QPen(c_dim, 1))
             painter.drawEllipse(cx - int(r), cy - int(r), int(r * 2), int(r * 2))
 
@@ -201,16 +287,16 @@ class RadarDisplay(QWidget):
         # Rotating sweep line
         painter.setPen(QPen(c, 3))
         rad = math.radians(self._scan_angle)
-        x2 = cx + int(r_outer * 0.9 * math.cos(rad))
-        y2 = cy + int(r_outer * 0.9 * math.sin(rad))
+        x2 = cx + int(r_outer * 0.92 * math.cos(rad))
+        y2 = cy + int(r_outer * 0.92 * math.sin(rad))
         painter.drawLine(cx, cy, x2, y2)
 
-        # Sweep glow
-        painter.setPen(QPen(QColor(0, 255, 255, 80), 1))
-        for i in range(1, 5):
-            rad2 = math.radians(self._scan_angle - i * 15)
-            x3 = cx + int(r_outer * 0.85 * math.cos(rad2))
-            y3 = cy + int(r_outer * 0.85 * math.sin(rad2))
+        # Sweep glow trails
+        painter.setPen(QPen(QColor(0, 255, 255, 70), 1))
+        for i in range(1, 6):
+            rad2 = math.radians(self._scan_angle - i * 12)
+            x3 = cx + int(r_outer * 0.88 * math.cos(rad2))
+            y3 = cy + int(r_outer * 0.88 * math.sin(rad2))
             painter.drawLine(cx, cy, x3, y3)
 
         # Center dot
@@ -220,156 +306,36 @@ class RadarDisplay(QWidget):
 
         # Corner brackets
         painter.setPen(QPen(c, 2))
-        sz = 30
-        # TL
-        painter.drawLine(20, 20, 20 + sz, 20)
-        painter.drawLine(20, 20, 20, 20 + sz)
-        # TR
-        painter.drawLine(w - 20 - sz, 20, w - 20, 20)
-        painter.drawLine(w - 20, 20, w - 20, 20 + sz)
-        # BL
-        painter.drawLine(20, h - 20 - sz, 20, h - 20)
-        painter.drawLine(20, h - 20, 20 + sz, h - 20)
-        # BR
-        painter.drawLine(w - 20 - sz, h - 20, w - 20, h - 20)
-        painter.drawLine(w - 20, h - 20 - sz, w - 20, h - 20)
+        sz = 32
+        painter.drawLine(22, 22, 22 + sz, 22)
+        painter.drawLine(22, 22, 22, 22 + sz)
+        painter.drawLine(w - 22 - sz, 22, w - 22, 22)
+        painter.drawLine(w - 22, 22, w - 22, 22 + sz)
+        painter.drawLine(22, h - 22 - sz, 22, h - 22)
+        painter.drawLine(22, h - 22, 22 + sz, h - 22)
+        painter.drawLine(w - 22 - sz, h - 22, w - 22, h - 22)
+        painter.drawLine(w - 22, h - 22 - sz, w - 22, h - 22)
 
 
 # ======================
-# HOLOGRAPHIC HEAD (Left of center)
-# ======================
-
-class HoloHead(QWidget):
-    """Wireframe human head hologram."""
-
-    def __init__(self):
-        super().__init__()
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self._angle = 0
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._animate)
-        self._timer.start(40)
-
-    def _animate(self):
-        self._angle = (self._angle + 1.5) % 360
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        w, h = self.width(), self.height()
-        cx, cy = w // 2, h // 2
-        c = ACCENT
-
-        painter.setPen(QPen(c, 2))
-        painter.setBrush(Qt.NoBrush)
-
-        # Head outline
-        r = min(w, h) // 2 - 10
-        painter.drawEllipse(cx - r, cy - r - 5, r * 2, r * 2)
-
-        # Face features
-        painter.setPen(QPen(c, 1))
-        # Eyes
-        painter.drawEllipse(cx - r // 2.5, cy - r // 3, 6, 6)
-        painter.drawEllipse(cx + r // 2.5 - 6, cy - r // 3, 6, 6)
-        # Nose
-        painter.drawLine(cx, cy - r // 4, cx, cy + r // 6)
-        # Mouth
-        painter.drawArc(cx - r // 4, cy + r // 6, r // 2, r // 6, 0, 180 * 16)
-
-        # Rotating orbit dots around head
-        painter.setPen(QPen(QColor(0, 255, 255, 100), 2))
-        for i in range(8):
-            ang = math.radians(self._angle + i * 45)
-            px = cx + int((r + 15) * math.cos(ang))
-            py = cy + int((r + 15) * math.sin(ang) * 0.6)
-            painter.drawEllipse(px - 2, py - 2, 4, 4)
-
-
-# ======================
-# HOLOGRAPHIC CAR (Right of center)
-# ======================
-
-class HoloCar(QWidget):
-    """Wireframe car hologram."""
-
-    def __init__(self):
-        super().__init__()
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self._angle = 0
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._animate)
-        self._timer.start(50)
-
-    def _animate(self):
-        self._angle = (self._angle + 1) % 360
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        w, h = self.width(), self.height()
-        cx, cy = w // 2, h // 2
-        c = ACCENT
-
-        painter.setPen(QPen(c, 2))
-        painter.setBrush(Qt.NoBrush)
-
-        # Car body outline
-        bw, bh = min(w, h) - 20, min(w, h) // 2
-        # Simple car silhouette
-        points = [
-            (cx - bw // 2, cy + bh // 4),   # rear bottom
-            (cx - bw // 2, cy - bh // 4),   # rear top
-            (cx - bw // 4, cy - bh // 2),   # roof rear
-            (cx + bw // 4, cy - bh // 2),   # roof front
-            (cx + bw // 2, cy - bh // 4),   # front top
-            (cx + bw // 2, cy + bh // 4),   # front bottom
-        ]
-        path = QPainterPath()
-        path.moveTo(*points[0])
-        for p in points[1:]:
-            path.lineTo(*p)
-        path.closeSubpath()
-        painter.drawPath(path)
-
-        # Wheels
-        painter.drawEllipse(cx - bw // 3, cy + bh // 4 - 6, 12, 12)
-        painter.drawEllipse(cx + bw // 3 - 12, cy + bh // 4 - 6, 12, 12)
-
-        # Windows
-        painter.setPen(QPen(QColor(0, 255, 255, 60), 1))
-        win_path = QPainterPath()
-        win_path.moveTo(cx - bw // 5, cy - bh // 3)
-        win_path.lineTo(cx - bw // 5, cy - bh // 5)
-        win_path.lineTo(cx + bw // 5, cy - bh // 5)
-        win_path.lineTo(cx + bw // 5, cy - bh // 3)
-        win_path.closeSubpath()
-        painter.drawPath(win_path)
-
-
-# ======================
-# NAVIGATION BUTTON
+# NAV BUTTON
 # ======================
 
 class NavButton(QPushButton):
     def __init__(self, icon: str, label: str, parent=None):
         super().__init__(parent)
-        self.setFixedSize(55, 55)
+        self.setFixedSize(60, 60)
         self.setStyleSheet("""
             QPushButton {
-                background: rgba(15, 25, 45, 150);
-                border: 1px solid rgba(0, 255, 255, 30);
-                border-radius: 10px;
+                background: rgba(12, 18, 30, 160);
+                border: 1px solid rgba(0, 255, 255, 35);
+                border-radius: 12px;
                 color: #a8b3cf;
                 font-size: 10px;
                 font-family: 'Consolas', monospace;
             }
             QPushButton:hover {
-                background: rgba(0, 255, 255, 30);
+                background: rgba(0, 255, 255, 35);
                 border: 1px solid #00ffff;
                 color: #00ffff;
             }
@@ -380,7 +346,7 @@ class NavButton(QPushButton):
 
         self.icon_lbl = QLabel(icon)
         self.icon_lbl.setAlignment(Qt.AlignCenter)
-        self.icon_lbl.setStyleSheet("font-size: 18px; color: #00ffff; background: transparent; border: none;")
+        self.icon_lbl.setStyleSheet("font-size: 20px; color: #00ffff; background: transparent; border: none;")
         layout.addWidget(self.icon_lbl)
 
         self.label_lbl = QLabel(label)
@@ -394,16 +360,14 @@ class NavButton(QPushButton):
 # ======================
 
 class JarvisWindow(QMainWindow):
-    """NOVA — Jarvis-style AI Operating Companion."""
-
     def __init__(self):
         super().__init__()
 
         gui_controller.GUI_ROOT = self
 
         self.setWindowTitle("NOVA — JARVIS Interface")
-        self.resize(1400, 800)
-        self.setMinimumSize(1200, 700)
+        self.resize(1500, 850)
+        self.setMinimumSize(1300, 750)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
 
@@ -419,46 +383,50 @@ class JarvisWindow(QMainWindow):
         self._start_timers()
         self._register_hotkey()
 
-    # ------------------------------------------------------------------
-    # UI Construction
-    # ------------------------------------------------------------------
     def _build_ui(self):
         self.central = QWidget()
         self.central.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setCentralWidget(self.central)
 
         main = QVBoxLayout(self.central)
-        main.setContentsMargins(20, 15, 20, 15)
-        main.setSpacing(10)
+        main.setContentsMargins(25, 20, 25, 20)
+        main.setSpacing(12)
 
-        # HUD Overlay
+        # HUD Overlay (scan lines + corner brackets)
         self.hud = HUDOverlay(self.central)
         self.hud.setGeometry(0, 0, self.width(), self.height())
         self.hud.raise_()
 
         # Title Bar
         title_bar = QWidget()
-        title_bar.setFixedHeight(40)
+        title_bar.setFixedHeight(52)
         title_bar.setAttribute(Qt.WA_TranslucentBackground, True)
         title_layout = QHBoxLayout(title_bar)
         title_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.title_label = QLabel("NOVA")
-        self.title_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #00ffff; letter-spacing: 3px; font-family: 'Consolas', monospace;")
+        self.title_label = QLabel("JARVIS")
+        self.title_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #00ffff; letter-spacing: 4px; font-family: 'Consolas', monospace;")
         title_layout.addWidget(self.title_label)
 
         title_layout.addStretch()
 
-        # Time & Date
-        self.time_label = QLabel("00:00 AM")
-        self.time_label.setStyleSheet("color: #e8edf5; font-size: 16px; font-weight: bold; font-family: 'Consolas', monospace;")
-        title_layout.addWidget(self.time_label)
+        # Time & Date at top right
+        time_date = QWidget()
+        time_date.setAttribute(Qt.WA_TranslucentBackground, True)
+        td_layout = QVBoxLayout(time_date)
+        td_layout.setContentsMargins(0, 0, 0, 0)
+        td_layout.setSpacing(0)
+        td_layout.setAlignment(Qt.AlignRight)
 
-        self.date_label = QLabel("MONDAY 01 JAN 2024")
+        self.time_label = QLabel("02:43 AM")
+        self.time_label.setStyleSheet("color: #e8edf5; font-size: 20px; font-weight: bold; font-family: 'Consolas', monospace;")
+        td_layout.addWidget(self.time_label)
+
+        self.date_label = QLabel("FRIDAY 04 APR 2024")
         self.date_label.setStyleSheet("color: #a8b3cf; font-size: 11px; font-family: 'Consolas', monospace;")
-        title_layout.addWidget(self.date_label)
+        td_layout.addWidget(self.date_label)
 
-        title_layout.addStretch()
+        title_layout.addWidget(time_date)
 
         # Window controls
         self.btn_min = QPushButton("─")
@@ -492,18 +460,18 @@ class JarvisWindow(QMainWindow):
         content.setAttribute(Qt.WA_TranslucentBackground, True)
         content_layout = QHBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(20)
+        content_layout.setSpacing(25)
 
         # Left Panel
         left_panel = QWidget()
         left_panel.setAttribute(Qt.WA_TranslucentBackground, True)
-        left_panel.setFixedWidth(260)
+        left_panel.setFixedWidth(270)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(12)
+        left_layout.setSpacing(10)
 
         # Voice Command panel
-        voice_panel = HudPanel("VOICE COMMAND")
+        voice_panel = GlassPanel("VOICE COMMAND")
         voice_inner = QHBoxLayout()
         mic_lbl = QLabel("🎙")
         mic_lbl.setStyleSheet("color: #00ffff; font-size: 16px;")
@@ -512,35 +480,34 @@ class JarvisWindow(QMainWindow):
         status_lbl = QLabel("ACTIVE")
         status_lbl.setStyleSheet("color: #00ff9d; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace;")
         voice_inner.addWidget(status_lbl)
-        voice_panel.add_widget(QWidget())  # spacer
         voice_panel.content_layout.addLayout(voice_inner)
         left_layout.addWidget(voice_panel)
 
         # System Settings panel
-        sys_panel = HudPanel("SYSTEM SETTINGS")
+        sys_panel = GlassPanel("SYSTEM SETTINGS")
         self.sys_cpu = StatRow("CPU", QColor(0, 255, 157))
         self.sys_mem = StatRow("Memory", QColor(0, 255, 255))
         self.sys_stor = StatRow("Storage", QColor(241, 196, 15))
         self.sys_net = StatRow("Network", QColor(155, 89, 182))
-        sys_panel.add_widget(self.sys_cpu)
-        sys_panel.add_widget(self.sys_mem)
-        sys_panel.add_widget(self.sys_stor)
-        sys_panel.add_widget(self.sys_net)
+        sys_panel.content_layout.addWidget(self.sys_cpu)
+        sys_panel.content_layout.addWidget(self.sys_mem)
+        sys_panel.content_layout.addWidget(self.sys_stor)
+        sys_panel.content_layout.addWidget(self.sys_net)
         left_layout.addWidget(sys_panel)
 
         # Environment panel
-        env_panel = HudPanel("ENVIRONMENT")
+        env_panel = GlassPanel("ENVIRONMENT")
+        env_row = QHBoxLayout()
         self.env_temp = QLabel("--°C")
         self.env_temp.setStyleSheet("color: #00ffff; font-size: 12px; font-family: 'Consolas', monospace;")
         self.env_hum = QLabel("--%")
         self.env_hum.setStyleSheet("color: #a8b3cf; font-size: 12px; font-family: 'Consolas', monospace;")
-        env_row = QHBoxLayout()
         env_row.addWidget(self.env_temp)
         env_row.addStretch()
         env_row.addWidget(self.env_hum)
         env_panel.content_layout.addLayout(env_row)
         env_clear = QPushButton("CLEAR")
-        env_clear.setFixedSize(60, 24)
+        env_clear.setFixedSize(64, 26)
         env_clear.setStyleSheet("""
             QPushButton {
                 background: rgba(0, 255, 255, 20);
@@ -557,7 +524,7 @@ class JarvisWindow(QMainWindow):
         left_layout.addWidget(env_panel)
 
         # Communications panel
-        comm_panel = HudPanel("COMMUNICATIONS")
+        comm_panel = GlassPanel("COMMUNICATIONS")
         comm_inner = QHBoxLayout()
         comm_inner.setSpacing(8)
         photo_lbl = QLabel("👤")
@@ -602,35 +569,29 @@ class JarvisWindow(QMainWindow):
         center_layout.setSpacing(15)
         center_layout.setAlignment(Qt.AlignCenter)
 
-        # Holographic head (left of center)
         holo_head = HoloHead()
-        holo_head.setFixedSize(120, 120)
+        holo_head.setFixedSize(130, 130)
 
-        # Radar (center)
         self.radar = RadarDisplay()
-        self.radar.setFixedSize(420, 420)
+        self.radar.setFixedSize(440, 440)
 
-        # Holographic car (right of center)
         holo_car = HoloCar()
-        holo_car.setFixedSize(140, 100)
+        holo_car.setFixedSize(150, 105)
 
-        # Top row: head - radar - car
         top_row = QHBoxLayout()
-        top_row.setSpacing(20)
+        top_row.setSpacing(25)
         top_row.addWidget(holo_head, 0, Qt.AlignCenter)
         top_row.addWidget(self.radar, 0, Qt.AlignCenter)
         top_row.addWidget(holo_car, 0, Qt.AlignCenter)
         center_layout.addLayout(top_row)
 
-        # "THIRD AVENUE" label
         avenue_lbl = QLabel("THIRD AVENUE")
         avenue_lbl.setStyleSheet("color: #00ffff; font-size: 11px; font-weight: bold; letter-spacing: 2px; font-family: 'Consolas', monospace;")
         avenue_lbl.setAlignment(Qt.AlignCenter)
         center_layout.addWidget(avenue_lbl)
 
-        # Car silhouette at bottom center
         car_sil = QLabel("🚗")
-        car_sil.setStyleSheet("font-size: 32px; color: rgba(0, 255, 255, 60);")
+        car_sil.setStyleSheet("font-size: 34px; color: rgba(0, 255, 255, 50);")
         car_sil.setAlignment(Qt.AlignCenter)
         center_layout.addWidget(car_sil)
 
@@ -639,39 +600,37 @@ class JarvisWindow(QMainWindow):
         # Right Panel
         right_panel = QWidget()
         right_panel.setAttribute(Qt.WA_TranslucentBackground, True)
-        right_panel.setFixedWidth(300)
+        right_panel.setFixedWidth(310)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(12)
+        right_layout.setSpacing(10)
 
-        # CPU panel
-        cpu_panel = HudPanel("CPU")
+        cpu_panel = GlassPanel("CPU")
         self.cpu_bar = QProgressBar()
         self.cpu_bar.setRange(0, 100)
         self.cpu_bar.setValue(0)
         self.cpu_bar.setTextVisible(False)
-        self.cpu_bar.setFixedHeight(8)
+        self.cpu_bar.setFixedHeight(7)
         self.cpu_bar.setStyleSheet("""
             QProgressBar {
                 background: rgba(255, 255, 255, 10);
                 border: none;
-                border-radius: 4px;
+                border-radius: 3px;
             }
             QProgressBar::chunk {
                 background: #00ffff;
-                border-radius: 4px;
+                border-radius: 3px;
             }
         """)
-        cpu_panel.add_widget(self.cpu_bar)
+        cpu_panel.content_layout.addWidget(self.cpu_bar)
         cpu_val = QLabel("70%")
         cpu_val.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         cpu_panel.content_layout.addWidget(cpu_val)
         right_layout.addWidget(cpu_panel)
 
-        # Location panel
-        loc_panel = HudPanel("LOCATION")
+        loc_panel = GlassPanel("LOCATION")
         map_lbl = QLabel("🗺")
-        map_lbl.setStyleSheet("font-size: 32px; color: rgba(0, 255, 255, 40);")
+        map_lbl.setStyleSheet("font-size: 34px; color: rgba(0, 255, 255, 40);")
         map_lbl.setAlignment(Qt.AlignCenter)
         loc_panel.content_layout.addWidget(map_lbl)
         loc_city = QLabel("NEW YORK, NY")
@@ -684,8 +643,7 @@ class JarvisWindow(QMainWindow):
         loc_panel.content_layout.addWidget(loc_pin)
         right_layout.addWidget(loc_panel)
 
-        # Mission panel
-        mission_panel = HudPanel("MISSION")
+        mission_panel = GlassPanel("MISSION")
         mission_title = QLabel("DAILY OBJECTIVES")
         mission_title.setStyleSheet("color: #a8b3cf; font-size: 9px; font-weight: bold; font-family: 'Consolas', monospace;")
         mission_panel.content_layout.addWidget(mission_title)
@@ -711,11 +669,10 @@ class JarvisWindow(QMainWindow):
             mission_panel.content_layout.addLayout(row)
         right_layout.addWidget(mission_panel)
 
-        # System settings bottom right
-        sys_panel2 = HudPanel("SYSTEM SETTINGS")
+        sys_panel2 = GlassPanel("SYSTEM SETTINGS")
         sys_inner = QHBoxLayout()
         holo_body = QLabel("🫐")
-        holo_body.setStyleSheet("font-size: 32px; color: rgba(0, 255, 255, 30);")
+        holo_body.setStyleSheet("font-size: 34px; color: rgba(0, 255, 255, 30);")
         sys_inner.addWidget(holo_body)
         sys_inner.addStretch()
         cap_lbl = QLabel("100%")
@@ -731,11 +688,11 @@ class JarvisWindow(QMainWindow):
 
         # Bottom Navigation Bar
         nav_bar = QWidget()
-        nav_bar.setFixedHeight(70)
+        nav_bar.setFixedHeight(72)
         nav_bar.setAttribute(Qt.WA_TranslucentBackground, True)
         nav_layout = QHBoxLayout(nav_bar)
         nav_layout.setContentsMargins(0, 0, 0, 0)
-        nav_layout.setSpacing(30)
+        nav_layout.setSpacing(35)
 
         nav_items = [
             ("🧭", "NAVIGATOR"),
@@ -750,7 +707,6 @@ class JarvisWindow(QMainWindow):
 
         nav_layout.addStretch()
 
-        # Resolution bottom right
         res_lbl = QLabel("444 x 296")
         res_lbl.setStyleSheet("color: #a8b3cf; font-size: 10px; font-family: 'Consolas', monospace;")
         nav_layout.addWidget(res_lbl)
@@ -760,18 +716,18 @@ class JarvisWindow(QMainWindow):
         # Bottom left: camera + waveform
         bottom_left = QWidget()
         bottom_left.setAttribute(Qt.WA_TranslucentBackground, True)
-        bottom_left.setFixedHeight(50)
+        bottom_left.setFixedHeight(52)
         bottom_layout = QHBoxLayout(bottom_left)
         bottom_layout.setContentsMargins(0, 0, 0, 0)
-        bottom_layout.setSpacing(10)
+        bottom_layout.setSpacing(12)
 
         cam_btn = QPushButton("📷")
-        cam_btn.setFixedSize(40, 40)
+        cam_btn.setFixedSize(42, 42)
         cam_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(0, 255, 255, 20);
                 border: 1px solid rgba(0, 255, 255, 60);
-                border-radius: 20px;
+                border-radius: 21px;
                 color: #00ffff;
                 font-size: 18px;
             }
@@ -781,7 +737,6 @@ class JarvisWindow(QMainWindow):
         """)
         bottom_layout.addWidget(cam_btn)
 
-        # Audio waveform
         wave_lbl = QLabel("▁▃▅▇▅▃▁")
         wave_lbl.setStyleSheet("color: #00ffff; font-size: 14px; font-family: 'Consolas', monospace;")
         bottom_layout.addWidget(wave_lbl)
@@ -796,14 +751,10 @@ class JarvisWindow(QMainWindow):
         chat_panel_layout.setContentsMargins(0, 0, 0, 0)
         chat_panel_layout.setSpacing(10)
 
-        self.chat_frame = GlassPanel()
+        self.chat_frame = GlassPanel("SYSTEM TERMINAL")
         chat_layout = QVBoxLayout(self.chat_frame)
         chat_layout.setContentsMargins(20, 15, 20, 15)
         chat_layout.setSpacing(8)
-
-        self.chat_title_lbl = QLabel("SYSTEM TERMINAL")
-        self.chat_title_lbl.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
-        chat_layout.addWidget(self.chat_title_lbl)
 
         self.chat_scroll = QScrollArea()
         self.chat_scroll.setWidgetResizable(True)
@@ -824,7 +775,6 @@ class JarvisWindow(QMainWindow):
         self.typing = TypingIndicator()
         chat_layout.addWidget(self.typing)
 
-        # Input area
         input_frame = QFrame()
         input_frame.setStyleSheet("""
             QFrame {
@@ -944,9 +894,6 @@ class JarvisWindow(QMainWindow):
             }}
         """
 
-    # ------------------------------------------------------------------
-    # Timers
-    # ------------------------------------------------------------------
     def _start_timers(self):
         self.dash_timer = QTimer(self)
         self.dash_timer.timeout.connect(self._update_dashboard)
@@ -957,18 +904,8 @@ class JarvisWindow(QMainWindow):
         self.resize_timer.timeout.connect(self._resize_hud)
         self.resize_timer.start(100)
 
-        self.wave_timer = QTimer(self)
-        self.wave_timer.timeout.connect(self._animate_wave)
-        self.wave_timer.start(150)
-        self._wave_state = 0
-
     def _resize_hud(self):
         self.hud.setGeometry(0, 0, self.width(), self.height())
-
-    def _animate_wave(self):
-        states = ["▁▃▅▇▅▃▁", "▁▂▃▄▅▆▇", "▇▆▅▄▃▂▁", "▁▃▅▇▅▃▁"]
-        # Find the wave label
-        pass
 
     def _update_dashboard(self):
         try:
@@ -989,9 +926,6 @@ class JarvisWindow(QMainWindow):
         except Exception:
             pass
 
-    # ------------------------------------------------------------------
-    # Hotkey: Alt + Space
-    # ------------------------------------------------------------------
     def _register_hotkey(self):
         try:
             import keyboard
@@ -1017,9 +951,6 @@ class JarvisWindow(QMainWindow):
         except Exception:
             pass
 
-    # ------------------------------------------------------------------
-    # Window dragging
-    # ------------------------------------------------------------------
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
@@ -1040,9 +971,6 @@ class JarvisWindow(QMainWindow):
         else:
             self.showMaximized()
 
-    # ------------------------------------------------------------------
-    # Chat visibility
-    # ------------------------------------------------------------------
     def _show_chat(self):
         if not self.chat_visible:
             self.chat_visible = True
@@ -1053,9 +981,6 @@ class JarvisWindow(QMainWindow):
         self.chat_visible = False
         self.chat_panel.hide()
 
-    # ------------------------------------------------------------------
-    # Chat
-    # ------------------------------------------------------------------
     def _add_user_message(self, text: str):
         bubble = ChatBubble(text, is_user=True)
         self.chat_layout_inner.insertWidget(self.chat_layout_inner.count() - 1, bubble)
@@ -1091,9 +1016,6 @@ class JarvisWindow(QMainWindow):
         bar = self.chat_scroll.verticalScrollBar()
         bar.setValue(bar.maximum())
 
-    # ------------------------------------------------------------------
-    # Actions
-    # ------------------------------------------------------------------
     def _on_send(self):
         text = self.input_field.text().strip()
         if not text:
@@ -1162,9 +1084,6 @@ class JarvisWindow(QMainWindow):
         self.current_ai_model = model_name
         set_ai_model(model_name)
 
-    # ------------------------------------------------------------------
-    # Start / Stop / Voice loop
-    # ------------------------------------------------------------------
     def _start_nova(self):
         if self.nova_running:
             self._add_nova_message("Already running.")
@@ -1212,9 +1131,6 @@ class JarvisWindow(QMainWindow):
             except Exception:
                 pass
 
-    # ------------------------------------------------------------------
-    # System tray
-    # ------------------------------------------------------------------
     def _minimize_to_tray(self):
         try:
             import pystray
@@ -1248,7 +1164,7 @@ class JarvisWindow(QMainWindow):
 
 
 # ======================
-# HUD OVERLAY
+# HUD OVERLAY — Scan lines + corner brackets
 # ======================
 
 class HUDOverlay(QWidget):
@@ -1268,39 +1184,28 @@ class HUDOverlay(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        pen = QPen(QColor(0, 255, 255, 15), 1)
+        # Horizontal scan lines
+        pen = QPen(QColor(0, 255, 255, 12), 1)
         painter.setPen(pen)
         for y in range(0, self.height(), 4):
             painter.drawLine(0, (y + self._offset) % self.height(), self.width(), (y + self._offset) % self.height())
 
-        pen = QPen(QColor(0, 255, 255, 80), 2)
+        # Corner brackets
+        pen = QPen(QColor(0, 255, 255, 70), 2)
         painter.setPen(pen)
-        size = 40
-        painter.drawLine(20, 20, 20 + size, 20)
-        painter.drawLine(20, 20, 20, 20 + size)
-        painter.drawLine(self.width() - 20 - size, 20, self.width() - 20, 20)
-        painter.drawLine(self.width() - 20, 20, self.width() - 20, 20 + size)
-        painter.drawLine(20, self.height() - 20 - size, 20, self.height() - 20)
-        painter.drawLine(20, self.height() - 20, 20 + size, self.height() - 20)
-        painter.drawLine(self.width() - 20 - size, self.height() - 20, self.width() - 20, self.height() - 20)
-        painter.drawLine(self.width() - 20, self.height() - 20 - size, self.width() - 20, self.height() - 20)
-
-
-# ======================
-# GLASS PANEL
-# ======================
-
-class GlassPanel(QFrame):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setStyleSheet("""
-            QFrame {
-                background: rgba(10, 20, 38, 180);
-                border: 1px solid rgba(0, 255, 255, 40);
-                border-radius: 16px;
-            }
-        """)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        size = 36
+        # TL
+        painter.drawLine(24, 24, 24 + size, 24)
+        painter.drawLine(24, 24, 24, 24 + size)
+        # TR
+        painter.drawLine(self.width() - 24 - size, 24, self.width() - 24, 24)
+        painter.drawLine(self.width() - 24, 24, self.width() - 24, 24 + size)
+        # BL
+        painter.drawLine(24, self.height() - 24 - size, 24, self.height() - 24)
+        painter.drawLine(24, self.height() - 24, 24 + size, self.height() - 24)
+        # BR
+        painter.drawLine(self.width() - 24 - size, self.height() - 24, self.width() - 24, self.height() - 24)
+        painter.drawLine(self.width() - 24, self.height() - 24 - size, self.width() - 24, self.height() - 24)
 
 
 # ======================
@@ -1449,10 +1354,10 @@ def main():
     palette = QPalette()
     palette.setColor(QPalette.Window, BG_DARK)
     palette.setColor(QPalette.WindowText, TEXT)
-    palette.setColor(QPalette.Base, PANEL)
+    palette.setColor(QPalette.Base, PANEL_BG)
     palette.setColor(QPalette.AlternateBase, BG_DARK)
     palette.setColor(QPalette.Text, TEXT)
-    palette.setColor(QPalette.Button, PANEL)
+    palette.setColor(QPalette.Button, PANEL_BG)
     palette.setColor(QPalette.ButtonText, TEXT)
     app.setPalette(palette)
 
