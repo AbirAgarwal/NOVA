@@ -1,5 +1,11 @@
+"""
+NOVA Brain - Command Processing & AI Routing
+Handles all predefined commands and falls back to AI when needed
+"""
+
 import json
-from ai_brain import get_ai_response, stream_ai_response, set_ai_model, AI_MODEL
+import os
+from ai_brain import get_ai_response, stream_ai_response, set_ai_model, AI_MODEL, check_ollama_status, install_model_prompt
 from memory_manager import *
 from actions import *
 from gui_controller import *
@@ -255,12 +261,13 @@ def get_response(text):
     if "system info" in text:
         return get_system_info()
 
-    #=================
+    # ======================
     # CHAT HISTORY
-    #=================
+    # ======================
+
     if "chat history" in text:
         return read_chat_history()
-    
+
     if "generate calculator program" in text:
         return generate_python_program(
             "calculator.py",
@@ -275,7 +282,7 @@ def get_response(text):
         ).strip()
 
         return improve_python_file(filename)
-    
+
     if "start coding" in text:
         return start_coding()
 
@@ -284,18 +291,16 @@ def get_response(text):
 
     if "study mode" in text:
         return study_mode()
-    
-    
+
     if "list project" in text or "list projects" in text:
         return list_projects()
-
 
     if "open project" in text:
 
         project_name = text.replace( "open project", "" ).strip()
 
         return open_project(project_name)
-    
+
     if "explain file" in text:
 
         filename = text.replace(
@@ -304,7 +309,7 @@ def get_response(text):
         ).strip()
 
         return explain_python_file(filename)
-    
+
     if "generate readme for" in text or "generate read me for" in text:
 
         project_name = text.replace(
@@ -315,7 +320,7 @@ def get_response(text):
         return generate_project_readme(
             project_name
         )
-    
+
     if  ("find bug in file" in text or "find bugs in file" in text):
 
         filename = text.replace(
@@ -324,7 +329,7 @@ def get_response(text):
         ).strip()
 
         return find_bugs_in_file(filename)
-    
+
     if "fix file" in text:
 
         filename = text.replace(
@@ -367,12 +372,12 @@ def get_response(text):
     if ("list my skills" in text or "lis my skill" in text ):
         return list_skills()
 
-    if ("list my goals" in text or "list my goal" in text) :
+    if ("list my goals" in text or "list my goal" in text):
         return list_goals()
 
     if ("tell me about myself" in text or "who am i" in text):
         return about_user()
-    
+
     if "start project" in text:
 
         project_name = text.replace(
@@ -381,16 +386,16 @@ def get_response(text):
         ).strip()
 
         return start_project(project_name)
-    
+
     if "hackathon setup" in text:
         return hackathon_setup()
-    
+
     if "morning briefing" in text or "morning brief" in text:
         return morning_briefing()
 
     if "daily briefing" in text or "daily brief" in text:
         return morning_briefing()
-    
+
     if "save note" in text or "save notes" in text:
 
         note = text.replace(
@@ -399,10 +404,10 @@ def get_response(text):
         ).strip()
 
         return add_note(note)
-    
+
     if "show notes" in text or "show note" in text:
         return list_notes()
-    
+
     if "search notes" in text or "search note" in text:
 
         keyword = text.replace(
@@ -411,7 +416,7 @@ def get_response(text):
         ).strip()
 
         return search_notes(keyword)
-    
+
     if "delete note" in text:
 
         try:
@@ -428,7 +433,7 @@ def get_response(text):
         except:
 
             return "Please provide a note number."
-        
+
     if "add task" in text or "add tasks" in text:
 
         task = text.replace(
@@ -437,7 +442,7 @@ def get_response(text):
         ).strip()
 
         return add_task(task)
-    
+
     if "show tasks" in text or "show task" in text:
         return list_tasks()
 
@@ -457,7 +462,7 @@ def get_response(text):
         except:
 
             return "Please provide a task number."
-        
+
     if "delete task" in text:
 
         try:
@@ -494,7 +499,7 @@ def get_response(text):
             project,
             note
         )
-    
+
     if "show project" in text:
 
         project = text.replace(
@@ -503,7 +508,7 @@ def get_response(text):
         ).strip()
 
         return show_project(project)
-    
+
     if "delete project note" in text:
 
         try:
@@ -530,7 +535,7 @@ def get_response(text):
                 "Use: delete project note "
                 "project_name note_number"
             )
-    
+
     if "journal today" in text:
 
         entry = text.replace(
@@ -564,7 +569,7 @@ def get_response(text):
                 "Please provide "
                 "a journal number."
             )
-        
+
     # ======================
     # OCR COMMANDS
     # ======================
@@ -577,7 +582,7 @@ def get_response(text):
         ).strip()
 
         return read_image_text(filename)
-    
+
     if "read my screen" in text:
         return read_current_screen()
 
@@ -586,7 +591,7 @@ def get_response(text):
 
     if "analyze my screen" in text or "analyse my screen" in text:
         return analyze_current_screen()
-    
+
     if "find file" in text:
 
         keyword = text.replace(
@@ -595,7 +600,7 @@ def get_response(text):
         ).strip()
 
         return search_files(keyword)
-    
+
     if ( "open file" in text or "open files" in text or "open the file" in text ):
 
         keyword = text.replace(
@@ -613,7 +618,7 @@ def get_response(text):
         ).strip()
 
         return close_app(app_name)
-    
+
     if "open website" in text:
 
         website = text.replace(
@@ -631,7 +636,7 @@ def get_response(text):
         ).strip()
 
         return open_folder_by_name(keyword)
-    
+
     if ( "lock computer" in text or "lock pc" in text ):
 
         pending_action = lock_computer
@@ -659,7 +664,6 @@ def get_response(text):
             "to shut down the computer?"
         )
 
-
     if "restart pc" in text or "restart computer" in text:
 
         pending_action = restart_pc
@@ -669,7 +673,6 @@ def get_response(text):
             "to restart the computer?"
         )
 
-
     if "sleep pc" in text or "sleep computer" in text:
 
         pending_action = sleep_pc
@@ -678,37 +681,38 @@ def get_response(text):
             "Are you sure you want "
             "to put the computer to sleep?"
         )
-    
+
     if ( "emergency shutdown" in text or "force shutdown" in text ):
         return shutdown_pc()
 
     if ( "emergency lock" in text or "lock now" in text ):
         return lock_computer()
-    
+
     if ( "work on" in text or "continue project" in text ):
 
         project_name = ( text.replace("work on", "").replace("continue project","").strip())
 
         return work_on_project(project_name)
-    
+
     if ( "status report" in text or "dashboard" in text ):
         return status_report()
-    
+
     if ( "what should i do today" in text or "daily plan" in text ):
         return daily_plan()
-    
+
     if ( "end of day review" in text or "daily review" in text ):
         return end_of_day_review()
-    
+
     if (
-        "hide yourself" in text or "go to tray" in text or "minimize yourself" in text or "hide nova" in text ):
-        
+        "hide yourself" in text or "go to tray" in text or "minimize yourself" in text or "hide nova" in text
+    ):
+
         return minimize_nova()
 
     if ("show yourself" in text or "restore window" in text or "show nova" in text or "open nova" in text):
-        
+
         return restore_nova()
-    
+
     if (
         "exit nova" in text
         or "close nova" in text
@@ -722,6 +726,7 @@ def get_response(text):
     # ======================
 
     return get_ai_response(text)
+
 
 def get_stream_response(text):
 

@@ -1,7 +1,15 @@
+"""
+NOVA AI Brain - Ollama Integration with Auto-Detection
+No API keys needed - runs 100% locally
+"""
+
+import sys
+import os
+import time
 from ollama import chat
 from memory_manager import get_memory_context
 
-# Faster default model — change via GUI model selector or here
+# Default AI model - change via GUI model selector or here
 AI_MODEL = "qwen3:1.8b"
 
 SYSTEM_PROMPT = """
@@ -103,3 +111,36 @@ def stream_ai_response(user_text):
     )
     if len(conversation) > 60:
         conversation[:] = [conversation[0]] + conversation[-59:]
+
+
+def check_ollama_status():
+    """Check if Ollama is running and model is available."""
+    try:
+        import requests
+        resp = requests.get("http://localhost:11434/api/tags", timeout=3)
+        if resp.status_code == 200:
+            models = resp.json().get("models", [])
+            model_names = [m.get("name", "") for m in models]
+            if AI_MODEL in model_names or any(AI_MODEL in m for m in model_names):
+                return True, "Online"
+            else:
+                return False, f"Model {AI_MODEL} not found"
+        else:
+            return False, "Ollama Error"
+    except Exception as exc:
+        return False, f"Ollama Offline: {str(exc)[:50]}"
+
+
+def install_model_prompt():
+    """Return instructions for installing Ollama model."""
+    return f"""
+    NOVA AI Model Not Found!
+
+    To fix this, run these commands:
+
+    1. Install Ollama: https://ollama.com
+    2. Run: ollama pull {AI_MODEL}
+    3. Run: ollama serve
+
+    Then restart NOVA.
+    """
