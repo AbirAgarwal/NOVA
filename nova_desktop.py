@@ -77,7 +77,7 @@ class NovaWorker(QThread):
 # ======================
 
 class ArcReactorCore(QWidget):
-    """Jarvis-style arc reactor with smooth animations and multiple layers."""
+    """Jarvis-style arc reactor with smooth continuous animation."""
 
     def __init__(self):
         super().__init__()
@@ -87,16 +87,16 @@ class ArcReactorCore(QWidget):
         self._mode = "online"
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._animate)
-        self._timer.start(25)
+        self._timer.start(16)  # ~60fps for smooth animation
 
     def set_mode(self, mode: str):
         self._mode = mode
         self.update()
 
     def _animate(self):
-        self._angle = (self._angle + 3) % 360
-        self._pulse = (self._pulse + 0.09) % (math.pi * 2)
-        self.update()
+        self._angle = (self._angle + 1.5) % 360  # Smaller increment for smoothness
+        self._pulse = (self._pulse + 0.1) % (math.pi * 2)
+        self.repaint()  # Immediate repaint for smooth animation
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -124,36 +124,35 @@ class ArcReactorCore(QWidget):
             painter.setPen(QPen(color, int(thickness)))
             painter.setBrush(Qt.NoBrush)
             points = []
-            for i in range(0, 360, 5):
+            for i in range(0, 360, 3):  # Smaller step for smoother circles
                 ang = math.radians(i)
                 x = ring_r * math.cos(ang)
                 y = ring_r * math.sin(ang) * math.cos(tilt_rad)
-                f = 1.0 / (1.0 + 0)
-                px = cx + int(x * f)
-                py = cy + int(y * f * 0.55)
+                px = cx + int(x)
+                py = cy + int(y * 0.55)
                 points.append((px, py))
             for i in range(len(points)):
                 p1 = points[i]
                 p2 = points[(i + 1) % len(points)]
                 painter.drawLine(p1[0], p1[1], p2[0], p2[1])
 
-        # Roaming particles
+        # Roaming particles - smoother movement
         painter.setPen(Qt.NoPen)
-        for i in range(20):
-            p_ang = self._angle + i * 18
-            p_dist = 100 + 25 * math.sin(math.radians(self._angle + i * 40))
+        for i in range(24):
+            p_ang = self._angle + i * 15
+            p_dist = 100 + 20 * math.sin(math.radians(self._angle + i * 30))
             p_x = cx + int(p_dist * math.cos(math.radians(p_ang)))
             p_y = cy + int(p_dist * 0.5 * math.sin(math.radians(p_ang)))
-            alpha = int(100 + 120 * math.sin(self._pulse + p_ang * 0.5))
+            alpha = int(120 + 135 * math.sin(self._pulse + p_ang * 0.5))
             p_color = QColor(color.red(), color.green(), color.blue(), alpha)
             painter.setBrush(QBrush(p_color))
             painter.drawEllipse(p_x - 2, p_y - 2, 4, 4)
 
         # Inner core - bright pulsing sun
-        inner_r = int(40 + 12 * abs(math.sin(self._pulse * 2)))
-        for i in range(6):
-            glow_r = inner_r + i * 8
-            alpha = int(40 * (1 - i * 0.15)) + int(30 * abs(math.sin(self._pulse)))
+        inner_r = int(42 + 14 * abs(math.sin(self._pulse * 2)))
+        for i in range(8):
+            glow_r = inner_r + i * 10
+            alpha = int(30 * (1 - i * 0.12)) + int(35 * abs(math.sin(self._pulse)))
             glow = QColor(color.red(), color.green(), color.blue(), alpha)
             painter.setPen(Qt.NoPen)
             painter.setBrush(QBrush(glow))
@@ -161,16 +160,19 @@ class ArcReactorCore(QWidget):
 
         grad = QRadialGradient(cx, cy, inner_r)
         grad.setColorAt(0, QColor(255, 255, 255, 255))
-        grad.setColorAt(0.35, QColor(color.red(), color.green(), color.blue(), 230))
-        grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 50))
+        grad.setColorAt(0.3, QColor(color.red(), color.green(), color.blue(), 240))
+        grad.setColorAt(0.7, QColor(color.red(), color.green(), color.blue(), 100))
+        grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 30))
         painter.setBrush(QBrush(grad))
         painter.setPen(QPen(color, 2))
         painter.drawEllipse(cx - inner_r, cy - inner_r, inner_r * 2, inner_r * 2)
 
-        # Center spark
+        # Center spark - brighter and more prominent
         painter.setBrush(QBrush(QColor(255, 255, 255, 255)))
         painter.setPen(Qt.NoPen)
-        painter.drawEllipse(cx - 3, cy - 3, 6, 6)
+        painter.drawEllipse(cx - 4, cy - 4, 8, 8)
+
+
 
 
 # ======================
