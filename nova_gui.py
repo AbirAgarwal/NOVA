@@ -1,12 +1,13 @@
 import sys
 import threading
 import os
+import math
 from datetime import datetime
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QComboBox, QFrame, QGraphicsDropShadowEffect,
-    QSizePolicy, QScrollArea
+    QLabel, QLineEdit, QPushButton, QComboBox, QFrame, QSizePolicy,
+    QScrollArea
 )
 from PySide6.QtCore import (
     Qt, QTimer, QPropertyAnimation, QEasingCurve, QPoint, QRect,
@@ -28,19 +29,17 @@ import gui_controller
 # JARVIS COLOR PALETTE
 # ======================
 
-BG_DARK = QColor(5, 10, 20)          # Deep space black
-PANEL = QColor(10, 20, 38, 220)      # Glass panel
-PANEL_BORDER = QColor(0, 255, 255, 60)  # Cyan border
-ACCENT = QColor(0, 255, 255)         # Cyan neon
-ACCENT_DIM = QColor(0, 136, 170)     # Dim cyan
-TEXT = QColor(232, 237, 245)         # Off white
-TEXT_DIM = QColor(168, 179, 207)     # Gray text
-GLOW = QColor(0, 255, 255, 40)       # Cyan glow
-SUCCESS = QColor(0, 255, 157)        # Green
-THINKING = QColor(241, 196, 15)      # Yellow
-SPEAKING = QColor(155, 89, 182)      # Purple
-OFFLINE = QColor(231, 76, 60)        # Red
-ONLINE = QColor(0, 255, 157)         # Green
+BG_DARK = QColor(5, 10, 20)
+PANEL = QColor(10, 20, 38, 220)
+ACCENT = QColor(0, 255, 255)
+ACCENT_DIM = QColor(0, 136, 170)
+TEXT = QColor(232, 237, 245)
+TEXT_DIM = QColor(168, 179, 207)
+SUCCESS = QColor(0, 255, 157)
+THINKING = QColor(241, 196, 15)
+SPEAKING = QColor(155, 89, 182)
+OFFLINE = QColor(231, 76, 60)
+ONLINE = QColor(0, 255, 157)
 
 
 # ======================
@@ -69,18 +68,18 @@ class NovaWorker(QThread):
 
 
 # ======================
-# REACTOR CORE WIDGET
+# 3D REACTOR CORE (Right Side)
 # ======================
 
 class ReactorCore(QWidget):
-    """Animated Jarvis-style arc reactor core in the center."""
+    """Improved Jarvis-style arc reactor with multiple glowing rings."""
 
     def __init__(self):
         super().__init__()
-        self.setFixedSize(220, 220)
+        self.setFixedSize(200, 200)
         self._angle = 0
         self._pulse = 0.0
-        self._mode = "online"  # online, listening, thinking, speaking, offline
+        self._mode = "online"
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._animate)
         self._timer.start(30)
@@ -90,8 +89,8 @@ class ReactorCore(QWidget):
         self.update()
 
     def _animate(self):
-        self._angle = (self._angle + 3) % 360
-        self._pulse = (self._pulse + 0.05) % (3.14159 * 2)
+        self._angle = (self._angle + 4) % 360
+        self._pulse = (self._pulse + 0.06) % (math.pi * 2)
         self.update()
 
     def paintEvent(self, event):
@@ -99,9 +98,7 @@ class ReactorCore(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
 
         cx, cy = self.width() // 2, self.height() // 2
-        radius = min(cx, cy) - 10
 
-        # Mode color
         mode_colors = {
             "online": ONLINE,
             "listening": ACCENT,
@@ -111,62 +108,160 @@ class ReactorCore(QWidget):
         }
         color = mode_colors.get(self._mode, ACCENT)
 
-        # Outer glow rings
-        for i in range(3):
-            ring_radius = radius - (i * 8)
-            alpha = int(60 * (1 - i * 0.25)) + int(40 * abs(__import__("math").sin(self._pulse)))
+        # Outer rings - multiple layers
+        for i in range(4):
+            ring_r = 95 - (i * 18)
+            alpha = int(50 * (1 - i * 0.2)) + int(30 * abs(math.sin(self._pulse)))
             glow = QColor(color.red(), color.green(), color.blue(), alpha)
             painter.setPen(QPen(glow, 2))
             painter.setBrush(Qt.NoBrush)
-            painter.drawEllipse(cx - ring_radius, cy - ring_radius, ring_radius * 2, ring_radius * 2)
+            painter.drawEllipse(cx - ring_r, cy - ring_r, ring_r * 2, ring_r * 2)
+
+        # Middle energy ring that rotates
+        mid_r = 55
+        painter.setPen(QPen(color, 3))
+        painter.setBrush(Qt.NoBrush)
+        for i in range(8):
+            ang = self._angle + i * 45
+            x1 = cx + int(mid_r * 0.7 * math.cos(math.radians(ang)))
+            y1 = cy + int(mid_r * 0.7 * math.sin(math.radians(ang)))
+            x2 = cx + int(mid_r * math.cos(math.radians(ang)))
+            y2 = cy + int(mid_r * math.sin(math.radians(ang)))
+            painter.drawLine(x1, y1, x2, y2)
 
         # Inner core
-        inner_radius = int(radius * 0.35 + 5 * abs(__import__("math").sin(self._pulse * 2)))
-        gradient = QRadialGradient(cx, cy, inner_radius)
-        gradient.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 255))
-        gradient.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 60))
-        painter.setBrush(QBrush(gradient))
-        painter.setPen(QPen(color, 3))
-        painter.drawEllipse(cx - inner_radius, cy - inner_radius, inner_radius * 2, inner_radius * 2)
-
-        # Rotating scan lines
+        inner_r = int(28 + 6 * abs(math.sin(self._pulse * 2)))
+        grad = QRadialGradient(cx, cy, inner_r)
+        grad.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 255))
+        grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 40))
+        painter.setBrush(QBrush(grad))
         painter.setPen(QPen(color, 2))
-        for i in range(6):
-            angle = self._angle + i * 60
-            import math
-            x1 = cx + int(inner_radius * 0.6 * math.cos(math.radians(angle)))
-            y1 = cy + int(inner_radius * 0.6 * math.sin(math.radians(angle)))
-            x2 = cx + int(radius * 0.9 * math.cos(math.radians(angle)))
-            y2 = cy + int(radius * 0.9 * math.sin(math.radians(angle)))
-            painter.drawLine(x1, y1, x2, y2)
+        painter.drawEllipse(cx - inner_r, cy - inner_r, inner_r * 2, inner_r * 2)
 
         # Center dot
         painter.setBrush(QBrush(color))
         painter.setPen(Qt.NoPen)
-        painter.drawEllipse(cx - 4, cy - 4, 8, 8)
+        painter.drawEllipse(cx - 3, cy - 3, 6, 6)
 
 
 # ======================
-# GLASS PANEL
+# 3D SPINNING LAPTOP HOLOGRAM (Center)
 # ======================
 
-class GlassPanel(QFrame):
-    """A translucent glassmorphism panel with neon border."""
+class LaptopHologram(QWidget):
+    """3D spinning laptop hologram like Jarvis armor display."""
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setStyleSheet("""
-            QFrame {
-                background: rgba(10, 20, 38, 180);
-                border: 1px solid rgba(0, 255, 255, 40);
-                border-radius: 16px;
-            }
-        """)
+    def __init__(self):
+        super().__init__()
         self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self._angle = 0
+        self._tilt = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._animate)
+        self._timer.start(40)
+
+    def _animate(self):
+        self._angle = (self._angle + 3) % 360
+        self._tilt = (self._tilt + 1) % 360
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        w, h = self.width(), self.height()
+        cx, cy = w // 2, h // 2
+
+        # Hologram color (cyan wireframe)
+        holo = QColor(0, 255, 255, 160)
+        holo_dim = QColor(0, 255, 255, 60)
+        painter.setPen(QPen(holo, 2))
+        painter.setBrush(Qt.NoBrush)
+
+        # Rotation for 3D effect
+        rad = math.radians(self._angle)
+        tilt_rad = math.radians(self._tilt)
+        scale_x = abs(math.cos(rad)) * 0.8 + 0.2  # Never fully disappear
+        scale_y = abs(math.cos(tilt_rad)) * 0.6 + 0.4
+
+        # Base size
+        lap_w = int(160 * scale_x)
+        lap_h = int(110 * scale_y)
+        screen_h = int(70 * scale_y)
+        keyboard_h = int(30 * scale_y)
+
+        # Laptop base (keyboard area)
+        base_rect = QRect(cx - lap_w // 2, cy + screen_h // 2, lap_w, keyboard_h)
+        painter.drawRect(base_rect)
+
+        # Screen
+        screen_rect = QRect(cx - lap_w // 2, cy - screen_h // 2, lap_w, screen_h)
+        painter.drawRect(screen_rect)
+
+        # Hinge line
+        painter.drawLine(cx - lap_w // 2, cy - screen_h // 2 + screen_h, cx + lap_w // 2, cy - screen_h // 2 + screen_h)
+
+        # Screen inner detail
+        inner = QRect(cx - lap_w // 2 + 10, cy - screen_h // 2 + 10, lap_w - 20, screen_h - 20)
+        painter.setPen(QPen(holo_dim, 1))
+        painter.drawRect(inner)
+
+        # NOVA text on screen
+        painter.setPen(QPen(ACCENT, 1))
+        painter.setFont(QFont("Consolas", 10, QFont.Bold))
+        painter.drawText(cx - 20, cy, "NOVA")
+
+        # Keyboard keys (small dots)
+        painter.setPen(QPen(holo, 2))
+        for row in range(3):
+            for col in range(6):
+                kx = cx - lap_w // 2 + 20 + col * 20
+                ky = cy + screen_h // 2 + 8 + row * 8
+                if kx < cx + lap_w // 2 - 10:
+                    painter.drawPoint(kx, ky)
+
+        # Rotating scan ring around laptop
+        self._pulse = self._angle * 0.1
+        ring_r = int(max(lap_w, screen_h + keyboard_h) * 0.6 + 20 * abs(math.sin(self._pulse)))
+        painter.setPen(QPen(QColor(0, 255, 255, 80), 1))
+        painter.drawEllipse(cx - ring_r, cy - ring_r // 2, ring_r * 2, ring_r)
+
+        # Floating particles around
+        painter.setPen(QPen(QColor(0, 255, 255, 100), 2))
+        for i in range(6):
+            ang = self._angle + i * 60
+            px = cx + int(130 * math.cos(math.radians(ang)))
+            py = cy + int(60 * math.sin(math.radians(ang)))
+            painter.drawEllipse(px - 2, py - 2, 4, 4)
 
 
 # ======================
-# CHAT BUBBLE
+# SMALL STATS (Right Side, below core)
+# ======================
+
+class MiniStat(QLabel):
+    """A tiny stat display."""
+
+    def __init__(self, name, color):
+        super().__init__()
+        self.name = name
+        self.color = color
+        self.setFixedHeight(22)
+        self.setAlignment(Qt.AlignCenter)
+        self.setStyleSheet(f"""
+            QLabel {{
+                color: {color.name()};
+                font-size: 10px;
+                font-weight: bold;
+                font-family: 'Consolas', monospace;
+                background: transparent;
+            }}
+        """)
+        self.setText(f"{name}: --")
+
+
+# ======================
+# CHAT BUBBLE (Floating)
 # ======================
 
 class ChatBubble(QFrame):
@@ -191,7 +286,6 @@ class ChatBubble(QFrame):
         self.label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         if self.is_user:
-            # User bubble — green, right side
             self.setStyleSheet("""
                 QFrame {
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -206,7 +300,6 @@ class ChatBubble(QFrame):
             layout.addStretch()
             layout.addWidget(self.label, 0)
         else:
-            # NOVA bubble — glass cyan, left side
             self.setStyleSheet("""
                 QFrame {
                     background: rgba(10, 20, 38, 200);
@@ -219,25 +312,16 @@ class ChatBubble(QFrame):
             layout.addWidget(self.label, 0)
             layout.addStretch()
 
-        self.setSizePolicy(
-            QSizePolicy.Preferred, QSizePolicy.Maximum
-        )
-
-        # Start fully transparent for fade-in
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.setWindowOpacity(0.0)
 
-    # ------------------------------------------------------------------
-    # Floating / fade animation
-    # ------------------------------------------------------------------
     def _start_floating_animation(self):
-        # Fade in
         self._fade_in = QPropertyAnimation(self, b"windowOpacity", self)
         self._fade_in.setDuration(600)
         self._fade_in.setStartValue(0.0)
         self._fade_in.setEndValue(1.0)
         self._fade_in.setEasingCurve(QEasingCurve.OutCubic)
 
-        # Float upward slightly as we fade in
         self._float_up = QPropertyAnimation(self, b"pos", self)
         self._float_up.setDuration(700)
         self._float_up.setStartValue(self.pos() + QPoint(0, 12))
@@ -249,7 +333,6 @@ class ChatBubble(QFrame):
         self._group.addAnimation(self._float_up)
         self._group.start()
 
-        # After TTL, fade out and remove
         QTimer.singleShot(self.ttl_ms, self._fade_out_and_remove)
 
     def _fade_out_and_remove(self):
@@ -259,7 +342,6 @@ class ChatBubble(QFrame):
         self._fade_out.setEndValue(0.0)
         self._fade_out.setEasingCurve(QEasingCurve.InCubic)
 
-        # Drift further up as fading out
         self._drift = QPropertyAnimation(self, b"pos", self)
         self._drift.setDuration(900)
         self._drift.setStartValue(self.pos())
@@ -273,7 +355,6 @@ class ChatBubble(QFrame):
         self._out_group.start()
 
     def _remove_self(self):
-        # Notify parent layout to clean up
         parent_layout = self.parentWidget().layout() if self.parentWidget() else None
         if parent_layout:
             parent_layout.removeWidget(self)
@@ -285,8 +366,6 @@ class ChatBubble(QFrame):
 # ======================
 
 class TypingIndicator(QWidget):
-    """Animated 'NOVA is processing...' indicator."""
-
     def __init__(self):
         super().__init__()
         self.setFixedHeight(32)
@@ -294,7 +373,7 @@ class TypingIndicator(QWidget):
         layout.setContentsMargins(16, 6, 16, 6)
 
         self.label = QLabel("NOVA is processing")
-        self.label.setStyleSheet(f"color: #00ffff; font-size: 11px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.label.setStyleSheet("color: #00ffff; font-size: 11px; font-weight: bold; font-family: 'Consolas', monospace;")
         layout.addWidget(self.label)
         layout.addStretch()
 
@@ -318,54 +397,6 @@ class TypingIndicator(QWidget):
 
 
 # ======================
-# HUD SCAN LINES OVERLAY
-# ======================
-
-class HUDOverlay(QWidget):
-    """Full-screen HUD overlay with scan lines and grid."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        self._offset = 0
-
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._animate)
-        self._timer.start(50)
-
-    def _animate(self):
-        self._offset = (self._offset + 2) % 20
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        # Scan lines
-        pen = QPen(QColor(0, 255, 255, 15), 1)
-        painter.setPen(pen)
-        for y in range(0, self.height(), 4):
-            painter.drawLine(0, (y + self._offset) % self.height(), self.width(), (y + self._offset) % self.height())
-
-        # Corner brackets
-        pen = QPen(QColor(0, 255, 255, 80), 2)
-        painter.setPen(pen)
-        size = 40
-        # Top-left
-        painter.drawLine(20, 20, 20 + size, 20)
-        painter.drawLine(20, 20, 20, 20 + size)
-        # Top-right
-        painter.drawLine(self.width() - 20 - size, 20, self.width() - 20, 20)
-        painter.drawLine(self.width() - 20, 20, self.width() - 20, 20 + size)
-        # Bottom-left
-        painter.drawLine(20, self.height() - 20 - size, 20, self.height() - 20)
-        painter.drawLine(20, self.height() - 20, 20 + size, self.height() - 20)
-        # Bottom-right
-        painter.drawLine(self.width() - 20 - size, self.height() - 20, self.width() - 20, self.height() - 20)
-        painter.drawLine(self.width() - 20, self.height() - 20 - size, self.width() - 20, self.height() - 20)
-
-
-# ======================
 # MAIN JARVIS WINDOW
 # ======================
 
@@ -377,10 +408,9 @@ class JarvisWindow(QMainWindow):
 
         gui_controller.GUI_ROOT = self
 
-        # Window setup — frameless and translucent
         self.setWindowTitle("NOVA — JARVIS Interface")
-        self.resize(1400, 900)
-        self.setMinimumSize(1100, 700)
+        self.resize(1500, 900)
+        self.setMinimumSize(1200, 700)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
 
@@ -390,15 +420,16 @@ class JarvisWindow(QMainWindow):
         self._current_nova_bubble = None
         self._current_nova_text = ""
         self._drag_pos = None
+        self.chat_visible = False
 
         self._build_ui()
         self._start_timers()
+        self._register_hotkey()
 
     # ------------------------------------------------------------------
     # UI Construction
     # ------------------------------------------------------------------
     def _build_ui(self):
-        # Central widget with translucent background
         self.central = QWidget()
         self.central.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setCentralWidget(self.central)
@@ -407,12 +438,12 @@ class JarvisWindow(QMainWindow):
         main.setContentsMargins(40, 30, 40, 30)
         main.setSpacing(20)
 
-        # --- HUD Overlay (full screen) ---
+        # HUD Overlay
         self.hud = HUDOverlay(self.central)
         self.hud.setGeometry(0, 0, self.width(), self.height())
         self.hud.raise_()
 
-        # --- Title Bar (custom, draggable) ---
+        # Title Bar
         title_bar = QWidget()
         title_bar.setFixedHeight(40)
         title_bar.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -425,7 +456,6 @@ class JarvisWindow(QMainWindow):
 
         title_layout.addStretch()
 
-        # Window controls
         self.btn_min = QPushButton("─")
         self.btn_max = QPushButton("□")
         self.btn_close = QPushButton("✕")
@@ -452,74 +482,109 @@ class JarvisWindow(QMainWindow):
 
         main.addWidget(title_bar)
 
-        # --- Content Area ---
+        # Content - Three columns: Left(empty), Center(Hologram), Right(Core+Stats)
         content = QWidget()
         content.setAttribute(Qt.WA_TranslucentBackground, True)
-        content_layout = QVBoxLayout(content)
+        content_layout = QHBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(20)
+        content_layout.setSpacing(40)
 
-        # Status + Model row
-        top_row = QHBoxLayout()
-        top_row.setSpacing(20)
+        # Left: Empty spacer (for balance) + hidden chat container
+        self.left_spacer = QWidget()
+        self.left_spacer.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.left_spacer.setMinimumWidth(100)
+        content_layout.addWidget(self.left_spacer, 0)
 
-        # Status indicator
+        # Center: Spinning Laptop Hologram
+        center_panel = QWidget()
+        center_panel.setAttribute(Qt.WA_TranslucentBackground, True)
+        center_layout = QVBoxLayout(center_panel)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.setAlignment(Qt.AlignCenter)
+
+        self.hologram = LaptopHologram()
+        self.hologram.setFixedSize(300, 300)
+        center_layout.addWidget(self.hologram)
+
+        # Status below hologram
         self.status_label = QLabel("● OFFLINE")
         self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
-        top_row.addWidget(self.status_label)
+        self.status_label.setAlignment(Qt.AlignCenter)
+        center_layout.addWidget(self.status_label)
 
-        top_row.addStretch()
+        content_layout.addWidget(center_panel, 1)
 
-        # Model selector
-        model_label = QLabel("AI Model:")
-        model_label.setStyleSheet("color: #a8b3cf; font-size: 11px; font-family: 'Consolas', monospace;")
-        top_row.addWidget(model_label)
+        # Right: Core + Stats
+        right_panel = QWidget()
+        right_panel.setAttribute(Qt.WA_TranslucentBackground, True)
+        right_panel.setFixedWidth(320)
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(15)
+        right_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
 
-        self.model_combo = QComboBox()
-        self.model_combo.addItems(["qwen3:1.8b", "qwen3:4b", "phi3:mini", "gemma2:2b", "tinyllama"])
-        self.model_combo.setCurrentText("qwen3:1.8b")
-        self.model_combo.setFixedWidth(150)
-        self.model_combo.setStyleSheet("""
-            QComboBox {
+        # Reactor Core
+        core_container = QWidget()
+        core_container.setAttribute(Qt.WA_TranslucentBackground, True)
+        core_layout = QHBoxLayout(core_container)
+        core_layout.setContentsMargins(0, 0, 0, 0)
+        core_layout.setAlignment(Qt.AlignCenter)
+
+        self.core = ReactorCore()
+        core_layout.addWidget(self.core)
+        right_layout.addWidget(core_container)
+
+        # Stats below core (small)
+        stats_frame = QFrame()
+        stats_frame.setStyleSheet("""
+            QFrame {
                 background: rgba(10, 20, 38, 160);
-                border: 1px solid rgba(0, 255, 255, 60);
-                border-radius: 8px;
-                color: #e8edf5;
-                padding: 4px 10px;
-                font-size: 11px;
-                font-family: 'Consolas', monospace;
-            }
-            QComboBox::drop-down {
-                border: none;
+                border: 1px solid rgba(0, 255, 255, 40);
+                border-radius: 12px;
             }
         """)
-        self.model_combo.currentTextChanged.connect(self._on_model_change)
-        top_row.addWidget(self.model_combo)
+        stats_frame.setFixedWidth(280)
+        stats_layout = QVBoxLayout(stats_frame)
+        stats_layout.setContentsMargins(12, 10, 12, 10)
+        stats_layout.setSpacing(4)
 
-        content_layout.addLayout(top_row)
+        stats_title = QLabel("SYSTEM VITALS")
+        stats_title.setStyleSheet("color: #00ffff; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace; letter-spacing: 1px;")
+        stats_layout.addWidget(stats_title)
 
-        # --- Split Layout: Left = Chat (smaller), Right = Core + Stats ---
-        split = QHBoxLayout()
-        split.setSpacing(25)
+        self.cpu_label = MiniStat("CPU", QColor(0, 255, 157))
+        self.ram_label = MiniStat("RAM", QColor(0, 255, 255))
+        self.bat_label = MiniStat("BAT", QColor(241, 196, 15))
+        self.time_label = MiniStat("TIME", QColor(0, 255, 255))
 
-        # ---- Left Panel: Chat Terminal (smaller) ----
-        left_panel = QWidget()
-        left_panel.setAttribute(Qt.WA_TranslucentBackground, True)
-        left_panel.setMinimumWidth(450)
-        left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(10)
+        stats_layout.addWidget(self.cpu_label)
+        stats_layout.addWidget(self.ram_label)
+        stats_layout.addWidget(self.bat_label)
+        stats_layout.addWidget(self.time_label)
 
-        chat_frame = GlassPanel()
-        chat_layout = QVBoxLayout(chat_frame)
-        chat_layout.setContentsMargins(18, 12, 18, 12)
+        right_layout.addWidget(stats_frame, 0, Qt.AlignCenter)
+        right_layout.addStretch()
+
+        content_layout.addWidget(right_panel, 0)
+
+        main.addWidget(content, 1)
+
+        # Hidden Chat Panel (shown on "show chat" command)
+        self.chat_panel = QWidget()
+        self.chat_panel.setAttribute(Qt.WA_TranslucentBackground, True)
+        chat_panel_layout = QVBoxLayout(self.chat_panel)
+        chat_panel_layout.setContentsMargins(0, 0, 0, 0)
+        chat_panel_layout.setSpacing(10)
+
+        self.chat_frame = GlassPanel()
+        chat_layout = QVBoxLayout(self.chat_frame)
+        chat_layout.setContentsMargins(20, 15, 20, 15)
         chat_layout.setSpacing(8)
 
-        self.chat_title = QLabel("SYSTEM TERMINAL")
-        self.chat_title.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
-        chat_layout.addWidget(self.chat_title)
+        self.chat_title_lbl = QLabel("SYSTEM TERMINAL")
+        self.chat_title_lbl.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
+        chat_layout.addWidget(self.chat_title_lbl)
 
-        # Scrollable chat
         self.chat_scroll = QScrollArea()
         self.chat_scroll.setWidgetResizable(True)
         self.chat_scroll.setFrameShape(QFrame.NoFrame)
@@ -536,7 +601,6 @@ class JarvisWindow(QMainWindow):
         self.chat_scroll.setWidget(self.chat_container)
         chat_layout.addWidget(self.chat_scroll, 1)
 
-        # Typing indicator
         self.typing = TypingIndicator()
         chat_layout.addWidget(self.typing)
 
@@ -611,9 +675,9 @@ class JarvisWindow(QMainWindow):
         input_layout.addWidget(self.send_btn)
 
         chat_layout.addWidget(input_frame)
-        left_layout.addWidget(chat_frame, 1)
+        chat_panel_layout.addWidget(self.chat_frame)
 
-        # Control buttons on left panel bottom
+        # Control buttons for chat panel
         btn_row = QHBoxLayout()
         btn_row.setSpacing(10)
 
@@ -629,108 +693,22 @@ class JarvisWindow(QMainWindow):
         self.stop_btn.clicked.connect(self._stop_nova)
         btn_row.addWidget(self.stop_btn)
 
-        self.tray_btn = QPushButton("⬇ TRAY")
-        self.tray_btn.setFixedSize(90, 36)
-        self.tray_btn.setStyleSheet(self._btn_style("#34495e"))
-        self.tray_btn.clicked.connect(self._minimize_to_tray)
-        btn_row.addWidget(self.tray_btn)
+        self.hide_chat_btn = QPushButton("✕ HIDE CHAT")
+        self.hide_chat_btn.setFixedSize(110, 36)
+        self.hide_chat_btn.setStyleSheet(self._btn_style("#34495e"))
+        self.hide_chat_btn.clicked.connect(self._hide_chat)
+        btn_row.addWidget(self.hide_chat_btn)
 
         btn_row.addStretch()
-        left_layout.addLayout(btn_row)
+        chat_panel_layout.addLayout(btn_row)
 
-        split.addWidget(left_panel, 1)
-
-        # ---- Right Panel: Reactor Core + Stats ----
-        right_panel = QWidget()
-        right_panel.setAttribute(Qt.WA_TranslucentBackground, True)
-        right_panel.setFixedWidth(340)
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(20)
-        right_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
-
-        # Reactor Core at top right
-        core_container = QWidget()
-        core_container.setAttribute(Qt.WA_TranslucentBackground, True)
-        core_layout = QHBoxLayout(core_container)
-        core_layout.setContentsMargins(0, 0, 0, 0)
-        core_layout.setAlignment(Qt.AlignCenter)
-
-        self.core = ReactorCore()
-        core_layout.addWidget(self.core)
-        right_layout.addWidget(core_container)
-
-        # Stats below core
-        stats_frame = QFrame()
-        stats_frame.setStyleSheet("""
-            QFrame {
-                background: rgba(10, 20, 38, 160);
-                border: 1px solid rgba(0, 255, 255, 50);
-                border-radius: 16px;
-            }
-        """)
-        stats_frame.setFixedWidth(300)
-        stats_layout = QVBoxLayout(stats_frame)
-        stats_layout.setContentsMargins(15, 15, 15, 15)
-        stats_layout.setSpacing(10)
-
-        stats_title = QLabel("SYSTEM VITALS")
-        stats_title.setStyleSheet("color: #00ffff; font-size: 11px; font-weight: bold; font-family: 'Consolas', monospace; letter-spacing: 1px;")
-        stats_layout.addWidget(stats_title)
-
-        self.cpu_label = self._make_stat("CPU", "0%", QColor(0, 255, 157))
-        self.ram_label = self._make_stat("RAM", "0%", QColor(0, 255, 255))
-        self.bat_label = self._make_stat("BAT", "0%", QColor(241, 196, 15))
-        self.time_label = self._make_stat("TIME", "00:00", QColor(0, 255, 255))
-
-        # Compact stats for right panel
-        for stat in (self.cpu_label, self.ram_label, self.bat_label, self.time_label):
-            stat.setFixedSize(270, 55)
-            stat.value_label.setStyleSheet(
-                stat.value_label.styleSheet().replace("20px", "17px")
-            )
-
-        stats_layout.addWidget(self.cpu_label)
-        stats_layout.addWidget(self.ram_label)
-        stats_layout.addWidget(self.bat_label)
-        stats_layout.addWidget(self.time_label)
-
-        right_layout.addWidget(stats_frame, 0, Qt.AlignCenter)
-        right_layout.addStretch()
-
-        split.addWidget(right_panel, 0)
-
-        content_layout.addLayout(split)
-
-        main.addWidget(content, 1)
-
-        # Welcome message
-        self._add_nova_message("System online. I am NOVA — your Jarvis-style AI companion. How may I assist you?")
+        # Initially hidden
+        self.chat_panel.hide()
+        main.addWidget(self.chat_panel)
 
     def _make_stat(self, name, value, color):
-        panel = QFrame()
-        panel.setStyleSheet("""
-            QFrame {
-                background: rgba(10, 20, 38, 140);
-                border: 1px solid rgba(255, 255, 255, 15);
-                border-radius: 12px;
-            }
-        """)
-        panel.setFixedSize(150, 70)
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(2)
-
-        name_lbl = QLabel(name)
-        name_lbl.setStyleSheet(f"color: #a8b3cf; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace;")
-        layout.addWidget(name_lbl)
-
-        val_lbl = QLabel(value)
-        val_lbl.setStyleSheet(f"color: {color.name()}; font-size: 20px; font-weight: bold; font-family: 'Consolas', monospace;")
-        layout.addWidget(val_lbl)
-
-        panel.value_label = val_lbl
-        return panel
+        # Kept for compatibility, not used in new layout
+        pass
 
     @staticmethod
     def _btn_style(accent_hex):
@@ -761,7 +739,6 @@ class JarvisWindow(QMainWindow):
         self.dash_timer.start(1000)
         self._update_dashboard()
 
-        # Resize HUD on window resize
         self.resize_timer = QTimer(self)
         self.resize_timer.timeout.connect(self._resize_hud)
         self.resize_timer.start(100)
@@ -781,18 +758,48 @@ class JarvisWindow(QMainWindow):
                 bat_text = "N/A"
             current_time = datetime.now().strftime("%I:%M:%S %p")
 
-            self.cpu_label.value_label.setText(f"{cpu}%")
-            self.ram_label.value_label.setText(f"{ram}%")
-            self.bat_label.value_label.setText(bat_text)
-            self.time_label.value_label.setText(current_time)
-
-            stats = get_stats()
-            # Could add memory stats here too
+            self.cpu_label.setText(f"CPU: {cpu}%")
+            self.ram_label.setText(f"RAM: {ram}%")
+            self.bat_label.setText(f"BAT: {bat_text}")
+            self.time_label.setText(f"TIME: {current_time}")
         except Exception:
             pass
 
     # ------------------------------------------------------------------
-    # Window dragging (frameless)
+    # Hotkey: Alt + Space
+    # ------------------------------------------------------------------
+    def _register_hotkey(self):
+        try:
+            import keyboard
+            keyboard.add_hotkey("alt+space", lambda: threading.Thread(target=self._hotkey_listen, daemon=True).start())
+        except Exception as exc:
+            print(f"Hotkey registration failed: {exc}")
+
+    def _hotkey_listen(self):
+        self.set_status("listening", "Hotkey activated")
+        try:
+            text = listen()
+        except Exception:
+            text = ""
+        if not text:
+            self.set_status("offline", "No speech detected")
+            return
+        self._add_user_message(text)
+        self.set_status("thinking", "Thinking")
+        try:
+            response = get_response(text)
+        except Exception as exc:
+            response = f"Error: {exc}"
+        self._add_nova_message(response)
+        self.set_status("speaking", "Speaking")
+        try:
+            speak(response)
+        except Exception:
+            pass
+        self.set_status("listening", "Listening")
+
+    # ------------------------------------------------------------------
+    # Window dragging
     # ------------------------------------------------------------------
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -813,6 +820,19 @@ class JarvisWindow(QMainWindow):
             self.showNormal()
         else:
             self.showMaximized()
+
+    # ------------------------------------------------------------------
+    # Chat visibility
+    # ------------------------------------------------------------------
+    def _show_chat(self):
+        if not self.chat_visible:
+            self.chat_visible = True
+            self.chat_panel.show()
+            self._add_nova_message("Chat terminal opened.")
+
+    def _hide_chat(self):
+        self.chat_visible = False
+        self.chat_panel.hide()
 
     # ------------------------------------------------------------------
     # Chat
@@ -860,9 +880,14 @@ class JarvisWindow(QMainWindow):
         if not text:
             return
 
+        if text.lower() in ("show chat", "open chat"):
+            self._show_chat()
+            return
+
         self.core.set_mode("thinking")
         self.set_status("thinking", f"User: {text}")
 
+        self._show_chat()
         self._add_user_message(text)
         self.input_field.clear()
         self.send_btn.setEnabled(False)
@@ -902,6 +927,7 @@ class JarvisWindow(QMainWindow):
         self.input_field.setEnabled(False)
         self.core.set_mode("listening")
         self.set_status("listening", "Listening...")
+        self._show_chat()
 
         def _voice_thread():
             try:
@@ -919,7 +945,7 @@ class JarvisWindow(QMainWindow):
                 self._worker.start()
             else:
                 self.core.set_mode("offline")
-                self.set_status("offline", "No speech detected.")
+                self.set_status("offline", "No speech detected")
                 self.send_btn.setEnabled(True)
                 self.input_field.setEnabled(True)
 
@@ -939,7 +965,7 @@ class JarvisWindow(QMainWindow):
         }
         color, hex_color = colors.get(mode, (OFFLINE, "#e74c3c"))
         self.status_label.setText(f"● {mode.upper()}")
-        self.status_label.setStyleSheet(f"color: {hex_color.name()}; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.status_label.setStyleSheet(f"color: {hex_color}; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
         self.core.set_mode(mode)
 
     # ------------------------------------------------------------------
@@ -975,7 +1001,7 @@ class JarvisWindow(QMainWindow):
             if not text:
                 continue
             self._add_user_message(text)
-            self.set_status("thinking", "Thinking...")
+            self.set_status("thinking", "Thinking")
             response = ""
             try:
                 for chunk in get_stream_response(text):
@@ -992,12 +1018,12 @@ class JarvisWindow(QMainWindow):
                 QTimer.singleShot(0, self.close)
                 break
             self._add_nova_message(response)
-            self.set_status("speaking", "Speaking...")
+            self.set_status("speaking", "Speaking")
             try:
                 speak(response)
             except Exception:
                 pass
-            self.set_status("listening", "Listening...")
+            self.set_status("listening", "Listening")
 
     # ------------------------------------------------------------------
     # System tray
@@ -1035,6 +1061,62 @@ class JarvisWindow(QMainWindow):
 
 
 # ======================
+# HUD OVERLAY
+# ======================
+
+class HUDOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self._offset = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._animate)
+        self._timer.start(50)
+
+    def _animate(self):
+        self._offset = (self._offset + 2) % 20
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        pen = QPen(QColor(0, 255, 255, 15), 1)
+        painter.setPen(pen)
+        for y in range(0, self.height(), 4):
+            painter.drawLine(0, (y + self._offset) % self.height(), self.width(), (y + self._offset) % self.height())
+
+        pen = QPen(QColor(0, 255, 255, 80), 2)
+        painter.setPen(pen)
+        size = 40
+        painter.drawLine(20, 20, 20 + size, 20)
+        painter.drawLine(20, 20, 20, 20 + size)
+        painter.drawLine(self.width() - 20 - size, 20, self.width() - 20, 20)
+        painter.drawLine(self.width() - 20, 20, self.width() - 20, 20 + size)
+        painter.drawLine(20, self.height() - 20 - size, 20, self.height() - 20)
+        painter.drawLine(20, self.height() - 20, 20 + size, self.height() - 20)
+        painter.drawLine(self.width() - 20 - size, self.height() - 20, self.width() - 20, self.height() - 20)
+        painter.drawLine(self.width() - 20, self.height() - 20 - size, self.width() - 20, self.height() - 20)
+
+
+# ======================
+# GLASS PANEL
+# ======================
+
+class GlassPanel(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("""
+            QFrame {
+                background: rgba(10, 20, 38, 180);
+                border: 1px solid rgba(0, 255, 255, 40);
+                border-radius: 16px;
+            }
+        """)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+
+
+# ======================
 # ENTRY POINT
 # ======================
 
@@ -1042,7 +1124,6 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    # Dark palette for any non-styled widgets
     from PySide6.QtGui import QPalette
     palette = QPalette()
     palette.setColor(QPalette.Window, BG_DARK)
