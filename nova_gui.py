@@ -5,7 +5,8 @@ from datetime import datetime
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QComboBox, QFrame, QGraphicsDropShadowEffect
+    QLabel, QLineEdit, QPushButton, QComboBox, QFrame, QGraphicsDropShadowEffect,
+    QSizePolicy, QScrollArea
 )
 from PySide6.QtCore import (
     Qt, QTimer, QPropertyAnimation, QEasingCurve, QPoint, QRect,
@@ -478,7 +479,6 @@ class JarvisWindow(QMainWindow):
         chat_layout.addWidget(self.chat_title)
 
         # Scrollable chat
-        from PySide6.QtWidgets import QScrollArea
         self.chat_scroll = QScrollArea()
         self.chat_scroll.setWidgetResizable(True)
         self.chat_scroll.setFrameShape(QFrame.NoFrame)
