@@ -2,6 +2,7 @@ import sys
 import threading
 import os
 import math
+import random
 from datetime import datetime
 
 from PySide6.QtWidgets import (
@@ -68,18 +69,219 @@ class NovaWorker(QThread):
 
 
 # ======================
-# 3D REACTOR CORE (Right Side)
+# REALISTIC LAPTOP HOLOGRAM (Center)
 # ======================
 
-class ReactorCore(QWidget):
-    """Improved Jarvis-style arc reactor with multiple glowing rings."""
+class LaptopHologram(QWidget):
+    """3D realistic laptop hologram like Jarvis armor display."""
 
     def __init__(self):
         super().__init__()
-        self.setFixedSize(200, 200)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self._angle = 0
+        self._tilt = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._animate)
+        self._timer.start(35)
+
+    def _animate(self):
+        self._angle = (self._angle + 2) % 360
+        self._tilt = (self._tilt + 1.5) % 360
+        self.update()
+
+    def _project3d(self, x, y, z, cx, cy, scale=1.0):
+        """Simple 3D projection: rotate around Y then project."""
+        rad_y = math.radians(self._angle)
+        rad_x = math.radians(self._tilt)
+
+        # Rotate around Y axis
+        x1 = x * math.cos(rad_y) - z * math.sin(rad_y)
+        z1 = x * math.sin(rad_y) + z * math.cos(rad_y)
+
+        # Rotate around X axis (tilt)
+        y1 = y * math.cos(rad_x) - z1 * math.sin(rad_x)
+        z2 = y * math.sin(rad_x) + z1 * math.cos(rad_x)
+
+        # Perspective projection
+        f = 400 / (400 + z2)
+        sx = cx + x1 * f * scale
+        sy = cy - y1 * f * scale  # flip Y for screen coords
+        return int(sx), int(sy)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        w, h = self.width(), self.height()
+        cx, cy = w // 2, h // 2
+
+        holo = QColor(0, 255, 255, 180)
+        holo_dim = QColor(0, 255, 255, 60)
+        screen_glow = QColor(0, 255, 255, 40)
+
+        painter.setPen(QPen(holo, 2))
+        painter.setBrush(Qt.NoBrush)
+
+        # Laptop dimensions
+        lap_w = 180
+        lap_d = 110  # depth
+        screen_h = 110
+        keyboard_h = 34
+        base_thick = 14
+
+        # --- Base (keyboard body) with 3D thickness ---
+        # Top face
+        pts_top = [
+            self._project3d(-lap_w/2, -keyboard_h/2, lap_d/2, cx, cy),
+            self._project3d(lap_w/2, -keyboard_h/2, lap_d/2, cx, cy),
+            self._project3d(lap_w/2, -keyboard_h/2, -lap_d/2, cx, cy),
+            self._project3d(-lap_w/2, -keyboard_h/2, -lap_d/2, cx, cy),
+        ]
+        path = QPainterPath()
+        path.moveTo(*pts_top[0])
+        for p in pts_top[1:]:
+            path.lineTo(*p)
+        path.closeSubpath()
+        painter.setPen(QPen(holo_dim, 1))
+        painter.setBrush(QBrush(QColor(0, 255, 255, 25)))
+        painter.drawPath(path)
+
+        # Front face (thickness)
+        pts_front = [
+            self._project3d(-lap_w/2, -keyboard_h/2, -lap_d/2, cx, cy),
+            self._project3d(lap_w/2, -keyboard_h/2, -lap_d/2, cx, cy),
+            self._project3d(lap_w/2, -keyboard_h/2 + base_thick, -lap_d/2, cx, cy),
+            self._project3d(-lap_w/2, -keyboard_h/2 + base_thick, -lap_d/2, cx, cy),
+        ]
+        path = QPainterPath()
+        path.moveTo(*pts_front[0])
+        for p in pts_front[1:]:
+            path.lineTo(*p)
+        path.closeSubpath()
+        painter.setPen(QPen(holo, 1))
+        painter.setBrush(QBrush(QColor(0, 255, 255, 40)))
+        painter.drawPath(path)
+
+        # Keyboard keys
+        painter.setPen(QPen(holo, 1.5))
+        for row in range(4):
+            for col in range(7):
+                kx = -lap_w/2 + 16 + col * 22
+                ky = -keyboard_h/2 + 6 + row * 7
+                if kx < lap_w/2 - 12:
+                    kx_s, ky_s = self._project3d(kx, ky, lap_d/2 + 1, cx, cy)
+                    painter.drawRect(kx_s - 3, ky_s - 3, 6, 6)
+
+        # Trackpad
+        tp_x, tp_y = self._project3d(-30, -keyboard_h/2 + 26, lap_d/2 + 1, cx, cy)
+        painter.setPen(QPen(holo_dim, 1))
+        painter.drawRect(tp_x - 14, tp_y - 8, 28, 16)
+
+        # --- Screen ---
+        screen_top_y = -keyboard_h/2 - screen_h
+        # Back of screen (thickness)
+        pts_screen_back = [
+            self._project3d(-lap_w/2, screen_top_y, lap_d/2, cx, cy),
+            self._project3d(lap_w/2, screen_top_y, lap_d/2, cx, cy),
+            self._project3d(lap_w/2, screen_top_y, lap_d/2 + base_thick, cx, cy),
+            self._project3d(-lap_w/2, screen_top_y, lap_d/2 + base_thick, cx, cy),
+        ]
+        path = QPainterPath()
+        path.moveTo(*pts_screen_back[0])
+        for p in pts_screen_back[1:]:
+            path.lineTo(*p)
+        path.closeSubpath()
+        painter.setPen(QPen(holo_dim, 1))
+        painter.setBrush(QBrush(QColor(0, 255, 255, 20)))
+        painter.drawPath(path)
+
+        # Screen face (glowing)
+        pts_screen = [
+            self._project3d(-lap_w/2, screen_top_y, lap_d/2, cx, cy),
+            self._project3d(lap_w/2, screen_top_y, lap_d/2, cx, cy),
+            self._project3d(lap_w/2, screen_top_y + screen_h, lap_d/2, cx, cy),
+            self._project3d(-lap_w/2, screen_top_y + screen_h, lap_d/2, cx, cy),
+        ]
+        path = QPainterPath()
+        path.moveTo(*pts_screen[0])
+        for p in pts_screen[1:]:
+            path.lineTo(*p)
+        path.closeSubpath()
+        grad = QLinearGradient(
+            pts_screen[0][0], pts_screen[0][1],
+            pts_screen[2][0], pts_screen[2][1]
+        )
+        grad.setColorAt(0, QColor(0, 255, 255, 30))
+        grad.setColorAt(1, QColor(0, 100, 150, 10))
+        painter.setBrush(QBrush(grad))
+        painter.setPen(QPen(holo, 2))
+        painter.drawPath(path)
+
+        # Screen content - NOVA text
+        painter.setPen(QPen(ACCENT, 1))
+        painter.setFont(QFont("Consolas", 11, QFont.Bold))
+        tx, ty = self._project3d(-25, screen_top_y + 30, lap_d/2 + 1, cx, cy)
+        painter.drawText(tx, ty, "NOVA")
+        painter.setFont(QFont("Consolas", 8))
+        tx2, ty2 = self._project3d(-25, screen_top_y + 44, lap_d/2 + 1, cx, cy)
+        painter.drawText(tx2, ty2, "SYSTEM ONLINE")
+
+        # Screen scan line
+        scan_y = (screen_top_y + (self._angle % screen_h)) 
+        sx1, sy1 = self._project3d(-lap_w/2, scan_y, lap_d/2 + 1, cx, cy)
+        sx2, sy2 = self._project3d(lap_w/2, scan_y, lap_d/2 + 1, cx, cy)
+        painter.setPen(QPen(QColor(0, 255, 255, 100), 1))
+        painter.drawLine(sx1, sy1, sx2, sy2)
+
+        # --- Hinge ---
+        hinge_y = screen_top_y
+        hx1, hy1 = self._project3d(-lap_w/2, hinge_y, lap_d/2, cx, cy)
+        hx2, hy2 = self._project3d(lap_w/2, hinge_y, lap_d/2, cx, cy)
+        painter.setPen(QPen(holo, 1.5))
+        painter.drawLine(hx1, hy1, hx2, hy2)
+
+        # --- Rotating orbit ring around laptop ---
+        self._orbit_angle = (getattr(self, '_orbit_angle', 0) + 3) % 360
+        ring_r = max(lap_w, screen_h) * 0.75
+        painter.setPen(QPen(QColor(0, 255, 255, 90), 1))
+        for i in range(12):
+            ang = self._orbit_angle + i * 30
+            px = cx + int(ring_r * math.cos(math.radians(ang)) * 0.9)
+            py = cy + int(ring_r * 0.4 * math.sin(math.radians(ang)))
+            painter.drawEllipse(px - 2, py - 2, 4, 4)
+
+        # Floating particles
+        painter.setPen(QPen(QColor(0, 255, 255, 110), 2))
+        for i in range(8):
+            ang = self._angle + i * 45
+            dist = 120 + 20 * math.sin(math.radians(self._angle + i * 60))
+            px = cx + int(dist * math.cos(math.radians(ang)) * 0.85)
+            py = cy + int(dist * 0.35 * math.sin(math.radians(ang)))
+            painter.drawEllipse(px - 2, py - 2, 4, 4)
+
+
+# ======================
+# SUN-LIKE REACTOR CORE (Right Side)
+# ======================
+
+class ReactorCore(QWidget):
+    """Sun-like reactor: bright center, orbiting rings in 3D, roaming particles."""
+
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(220, 220)
         self._angle = 0
         self._pulse = 0.0
         self._mode = "online"
+        self._particles = []
+        for _ in range(24):
+            self._particles.append({
+                'angle': random.random() * 360,
+                'dist': random.uniform(40, 85),
+                'speed': random.uniform(1, 3),
+                'orbit_tilt': random.uniform(-30, 30),
+                'size': random.uniform(1.5, 3.5),
+            })
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._animate)
         self._timer.start(30)
@@ -89,8 +291,10 @@ class ReactorCore(QWidget):
         self.update()
 
     def _animate(self):
-        self._angle = (self._angle + 4) % 360
-        self._pulse = (self._pulse + 0.06) % (math.pi * 2)
+        self._angle = (self._angle + 3) % 360
+        self._pulse = (self._pulse + 0.07) % (math.pi * 2)
+        for p in self._particles:
+            p['angle'] = (p['angle'] + p['speed']) % 360
         self.update()
 
     def paintEvent(self, event):
@@ -108,156 +312,240 @@ class ReactorCore(QWidget):
         }
         color = mode_colors.get(self._mode, ACCENT)
 
-        # Outer rings - multiple layers
-        for i in range(4):
-            ring_r = 95 - (i * 18)
-            alpha = int(50 * (1 - i * 0.2)) + int(30 * abs(math.sin(self._pulse)))
-            glow = QColor(color.red(), color.green(), color.blue(), alpha)
-            painter.setPen(QPen(glow, 2))
+        # --- Orbiting rings (3D ellipses at different angles) ---
+        ring_configs = [
+            (78, 0, 1.0),    # flat ring
+            (62, 25, 0.85),  # tilted ring 1
+            (92, -20, 0.7),  # tilted ring 2
+        ]
+        for ring_r, tilt, thickness in ring_configs:
+            tilt_rad = math.radians(tilt + self._angle * 0.25)
+            painter.setPen(QPen(color, 1))
             painter.setBrush(Qt.NoBrush)
-            painter.drawEllipse(cx - ring_r, cy - ring_r, ring_r * 2, ring_r * 2)
+            points = []
+            for i in range(0, 360, 6):
+                ang = math.radians(i)
+                x = ring_r * math.cos(ang)
+                y = ring_r * math.sin(ang) * math.cos(tilt_rad)
+                # Project 3D ellipse
+                px = cx + int(x)
+                py = cy + int(y * 0.55)
+                points.append((px, py))
+            for i in range(len(points)):
+                p1 = points[i]
+                p2 = points[(i + 1) % len(points)]
+                painter.drawLine(p1[0], p1[1], p2[0], p2[1])
 
-        # Middle energy ring that rotates
-        mid_r = 55
-        painter.setPen(QPen(color, 3))
-        painter.setBrush(Qt.NoBrush)
-        for i in range(8):
-            ang = self._angle + i * 45
-            x1 = cx + int(mid_r * 0.7 * math.cos(math.radians(ang)))
-            y1 = cy + int(mid_r * 0.7 * math.sin(math.radians(ang)))
-            x2 = cx + int(mid_r * math.cos(math.radians(ang)))
-            y2 = cy + int(mid_r * math.sin(math.radians(ang)))
-            painter.drawLine(x1, y1, x2, y2)
+        # --- Roaming particles around sun ---
+        painter.setPen(Qt.NoPen)
+        for p in self._particles:
+            tilt_rad = math.radians(p['orbit_tilt'])
+            ang = math.radians(p['angle'])
+            x = p['dist'] * math.cos(ang)
+            y = p['dist'] * math.sin(ang) * math.cos(tilt_rad)
+            z = p['dist'] * math.sin(ang) * math.sin(tilt_rad)
+            # Simple 3D to 2D projection
+            f = 1.0 / (1.0 + z / 200.0)
+            px = cx + int(x * f)
+            py = cy + int(y * f * 0.6)
+            alpha = int(120 + 100 * math.sin(self._pulse + p['angle']))
+            pcolor = QColor(color.red(), color.green(), color.blue(), alpha)
+            painter.setBrush(QBrush(pcolor))
+            painter.drawEllipse(px - p['size'], py - p['size'], p['size'] * 2, p['size'] * 2)
 
-        # Inner core
-        inner_r = int(28 + 6 * abs(math.sin(self._pulse * 2)))
+        # --- Sun center (bright, pulsing) ---
+        inner_r = int(24 + 8 * abs(math.sin(self._pulse * 2)))
+        # Outer sun glow
+        for i in range(5):
+            glow_r = inner_r + i * 6
+            alpha = int(60 * (1 - i * 0.15)) + int(40 * abs(math.sin(self._pulse)))
+            glow = QColor(color.red(), color.green(), color.blue(), alpha)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(glow))
+            painter.drawEllipse(cx - glow_r, cy - glow_r, glow_r * 2, glow_r * 2)
+
+        # Core gradient
         grad = QRadialGradient(cx, cy, inner_r)
-        grad.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 255))
-        grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 40))
+        grad.setColorAt(0, QColor(255, 255, 255, 255))
+        grad.setColorAt(0.4, QColor(color.red(), color.green(), color.blue(), 220))
+        grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 60))
         painter.setBrush(QBrush(grad))
         painter.setPen(QPen(color, 2))
         painter.drawEllipse(cx - inner_r, cy - inner_r, inner_r * 2, inner_r * 2)
 
-        # Center dot
-        painter.setBrush(QBrush(color))
+        # Center spark
+        painter.setBrush(QBrush(QColor(255, 255, 255, 255)))
         painter.setPen(Qt.NoPen)
-        painter.drawEllipse(cx - 3, cy - 3, 6, 6)
+        painter.drawEllipse(cx - 2, cy - 2, 4, 4)
 
 
 # ======================
-# 3D SPINNING LAPTOP HOLOGRAM (Center)
+# INDIVIDUAL STAT HOLOGRAM (Right Side, below core)
 # ======================
 
-class LaptopHologram(QWidget):
-    """3D spinning laptop hologram like Jarvis armor display."""
+class StatHoloWidget(QFrame):
+    """Individual stat with moving 3D hologram icon."""
 
-    def __init__(self):
+    def __init__(self, name, icon_type, color):
         super().__init__()
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.name = name
+        self.icon_type = icon_type
+        self.color = color
         self._angle = 0
-        self._tilt = 0
+        self._value = "--"
+        self.setFixedSize(270, 62)
+        self.setStyleSheet("""
+            QFrame {
+                background: rgba(10, 20, 38, 150);
+                border: 1px solid rgba(255, 255, 255, 15);
+                border-radius: 12px;
+            }
+        """)
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._animate)
         self._timer.start(40)
 
+    def set_value(self, value: str):
+        self._value = value
+
     def _animate(self):
         self._angle = (self._angle + 3) % 360
-        self._tilt = (self._tilt + 1) % 360
         self.update()
+
+    def _project3d(self, x, y, z, cx, cy, scale=1.0):
+        rad_y = math.radians(self._angle)
+        x1 = x * math.cos(rad_y) - z * math.sin(rad_y)
+        z1 = x * math.sin(rad_y) + z * math.cos(rad_y)
+        f = 300 / (300 + z1)
+        return int(cx + x1 * f * scale), int(cy - y * f * scale)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
         w, h = self.width(), self.height()
-        cx, cy = w // 2, h // 2
+        cx, cy = 40, h // 2  # icon on left side
 
-        # Hologram color (cyan wireframe)
-        holo = QColor(0, 255, 255, 160)
-        holo_dim = QColor(0, 255, 255, 60)
-        painter.setPen(QPen(holo, 2))
-        painter.setBrush(Qt.NoBrush)
+        c = self.color
 
-        # Rotation for 3D effect
-        rad = math.radians(self._angle)
-        tilt_rad = math.radians(self._tilt)
-        scale_x = abs(math.cos(rad)) * 0.8 + 0.2  # Never fully disappear
-        scale_y = abs(math.cos(tilt_rad)) * 0.6 + 0.4
+        if self.icon_type == "cpu":
+            # Chip hologram: square with pins
+            painter.setPen(QPen(c, 2))
+            painter.setBrush(Qt.NoBrush)
+            chip_w, chip_h = 36, 36
+            pts = [
+                self._project3d(-chip_w/2, -chip_h/2, 0, cx, cy),
+                self._project3d(chip_w/2, -chip_h/2, 0, cx, cy),
+                self._project3d(chip_w/2, chip_h/2, 0, cx, cy),
+                self._project3d(-chip_w/2, chip_h/2, 0, cx, cy),
+            ]
+            path = QPainterPath()
+            path.moveTo(*pts[0])
+            for p in pts[1:]:
+                path.lineTo(*p)
+            path.closeSubpath()
+            painter.drawPath(path)
+            # Pins around
+            painter.setPen(QPen(c, 1.5))
+            for i in range(8):
+                ang = self._angle + i * 45
+                px = cx + int(22 * math.cos(math.radians(ang)))
+                py = cy + int(22 * math.sin(math.radians(ang)) * 0.6)
+                painter.drawPoint(px, py)
+            # Center dot
+            painter.setBrush(QBrush(c))
+            painter.drawEllipse(cx - 3, cy - 3, 6, 6)
 
-        # Base size
-        lap_w = int(160 * scale_x)
-        lap_h = int(110 * scale_y)
-        screen_h = int(70 * scale_y)
-        keyboard_h = int(30 * scale_y)
+        elif self.icon_type == "ram":
+            # Memory sticks: two vertical bars
+            painter.setPen(QPen(c, 2))
+            painter.setBrush(Qt.NoBrush)
+            for offset in (-12, 12):
+                bx = cx + offset
+                pts = [
+                    self._project3d(-8, -22, 0, bx, cy),
+                    self._project3d(8, -22, 0, bx, cy),
+                    self._project3d(8, 22, 0, bx, cy),
+                    self._project3d(-8, 22, 0, bx, cy),
+                ]
+                path = QPainterPath()
+                path.moveTo(*pts[0])
+                for p in pts[1:]:
+                    path.lineTo(*p)
+                path.closeSubpath()
+                painter.drawPath(path)
+                # Segments on stick
+                for seg in range(4):
+                    sy = -22 + seg * 11
+                    sx1, sy1 = self._project3d(-8, sy, 0, bx, cy)
+                    sx2, sy2 = self._project3d(8, sy, 0, bx, cy)
+                    painter.drawLine(sx1, sy1, sx2, sy2)
 
-        # Laptop base (keyboard area)
-        base_rect = QRect(cx - lap_w // 2, cy + screen_h // 2, lap_w, keyboard_h)
-        painter.drawRect(base_rect)
+        elif self.icon_type == "bat":
+            # Battery hologram: rectangle with tip
+            painter.setPen(QPen(c, 2))
+            painter.setBrush(Qt.NoBrush)
+            bw, bh = 26, 34
+            pts = [
+                self._project3d(-bw/2, -bh/2, 0, cx, cy),
+                self._project3d(bw/2, -bh/2, 0, cx, cy),
+                self._project3d(bw/2, bh/2, 0, cx, cy),
+                self._project3d(-bw/2, bh/2, 0, cx, cy),
+            ]
+            path = QPainterPath()
+            path.moveTo(*pts[0])
+            for p in pts[1:]:
+                path.lineTo(*p)
+            path.closeSubpath()
+            painter.drawPath(path)
+            # Tip
+            tip_pts = [
+                self._project3d(bw/2, -6, 0, cx, cy),
+                self._project3d(bw/2 + 6, 0, 0, cx, cy),
+                self._project3d(bw/2, 6, 0, cx, cy),
+            ]
+            tpath = QPainterPath()
+            tpath.moveTo(*tip_pts[0])
+            for p in tip_pts[1:]:
+                tpath.lineTo(*p)
+            tpath.closeSubpath()
+            painter.drawPath(tpath)
+            # Fill level
+            try:
+                fill_val = float(self._value.replace('%', ''))
+            except Exception:
+                fill_val = 50.0
+            fill = max(0.0, min(1.0, fill_val / 100.0))
+            painter.setBrush(QBrush(QColor(c.red(), c.green(), c.blue(), 100)))
+            painter.drawRect(cx - bw/2 + 2, cy - bh/2 + 2, int((bw - 4) * fill), bh - 4)
 
-        # Screen
-        screen_rect = QRect(cx - lap_w // 2, cy - screen_h // 2, lap_w, screen_h)
-        painter.drawRect(screen_rect)
+        elif self.icon_type == "time":
+            # Clock hologram: circle with hands
+            painter.setPen(QPen(c, 2))
+            painter.setBrush(Qt.NoBrush)
+            cr = 18
+            painter.drawEllipse(cx - cr, cy - cr, cr * 2, cr * 2)
+            # Hands
+            now = datetime.now()
+            sec_angle = now.second * 6
+            min_angle = now.minute * 6 + now.second * 0.1
+            for ang, length in ((sec_angle, 14), (min_angle, 11)):
+                hx = cx + int(length * math.cos(math.radians(ang - 90)))
+                hy = cy + int(length * math.sin(math.radians(ang - 90)) * 0.7)
+                painter.drawLine(cx, cy, hx, hy)
+            # Center
+            painter.setBrush(QBrush(c))
+            painter.drawEllipse(cx - 2, cy - 2, 4, 4)
 
-        # Hinge line
-        painter.drawLine(cx - lap_w // 2, cy - screen_h // 2 + screen_h, cx + lap_w // 2, cy - screen_h // 2 + screen_h)
+        # Value text on right
+        painter.setPen(QPen(c, 1))
+        painter.setFont(QFont("Consolas", 11, QFont.Bold))
+        painter.drawText(95, cy + 5, self._value)
 
-        # Screen inner detail
-        inner = QRect(cx - lap_w // 2 + 10, cy - screen_h // 2 + 10, lap_w - 20, screen_h - 20)
-        painter.setPen(QPen(holo_dim, 1))
-        painter.drawRect(inner)
-
-        # NOVA text on screen
-        painter.setPen(QPen(ACCENT, 1))
-        painter.setFont(QFont("Consolas", 10, QFont.Bold))
-        painter.drawText(cx - 20, cy, "NOVA")
-
-        # Keyboard keys (small dots)
-        painter.setPen(QPen(holo, 2))
-        for row in range(3):
-            for col in range(6):
-                kx = cx - lap_w // 2 + 20 + col * 20
-                ky = cy + screen_h // 2 + 8 + row * 8
-                if kx < cx + lap_w // 2 - 10:
-                    painter.drawPoint(kx, ky)
-
-        # Rotating scan ring around laptop
-        self._pulse = self._angle * 0.1
-        ring_r = int(max(lap_w, screen_h + keyboard_h) * 0.6 + 20 * abs(math.sin(self._pulse)))
-        painter.setPen(QPen(QColor(0, 255, 255, 80), 1))
-        painter.drawEllipse(cx - ring_r, cy - ring_r // 2, ring_r * 2, ring_r)
-
-        # Floating particles around
-        painter.setPen(QPen(QColor(0, 255, 255, 100), 2))
-        for i in range(6):
-            ang = self._angle + i * 60
-            px = cx + int(130 * math.cos(math.radians(ang)))
-            py = cy + int(60 * math.sin(math.radians(ang)))
-            painter.drawEllipse(px - 2, py - 2, 4, 4)
-
-
-# ======================
-# SMALL STATS (Right Side, below core)
-# ======================
-
-class MiniStat(QLabel):
-    """A tiny stat display."""
-
-    def __init__(self, name, color):
-        super().__init__()
-        self.name = name
-        self.color = color
-        self.setFixedHeight(22)
-        self.setAlignment(Qt.AlignCenter)
-        self.setStyleSheet(f"""
-            QLabel {{
-                color: {color.name()};
-                font-size: 10px;
-                font-weight: bold;
-                font-family: 'Consolas', monospace;
-                background: transparent;
-            }}
-        """)
-        self.setText(f"{name}: --")
+        # Name text below value
+        painter.setPen(QPen(TEXT_DIM, 1))
+        painter.setFont(QFont("Consolas", 8))
+        painter.drawText(95, cy + 18, self.name)
 
 
 # ======================
@@ -482,17 +770,17 @@ class JarvisWindow(QMainWindow):
 
         main.addWidget(title_bar)
 
-        # Content - Three columns: Left(empty), Center(Hologram), Right(Core+Stats)
+        # Content - Three columns
         content = QWidget()
         content.setAttribute(Qt.WA_TranslucentBackground, True)
         content_layout = QHBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(40)
 
-        # Left: Empty spacer (for balance) + hidden chat container
+        # Left: Empty spacer
         self.left_spacer = QWidget()
         self.left_spacer.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.left_spacer.setMinimumWidth(100)
+        self.left_spacer.setMinimumWidth(80)
         content_layout.addWidget(self.left_spacer, 0)
 
         # Center: Spinning Laptop Hologram
@@ -503,7 +791,7 @@ class JarvisWindow(QMainWindow):
         center_layout.setAlignment(Qt.AlignCenter)
 
         self.hologram = LaptopHologram()
-        self.hologram.setFixedSize(300, 300)
+        self.hologram.setFixedSize(320, 320)
         center_layout.addWidget(self.hologram)
 
         # Status below hologram
@@ -514,16 +802,16 @@ class JarvisWindow(QMainWindow):
 
         content_layout.addWidget(center_panel, 1)
 
-        # Right: Core + Stats
+        # Right: Core + Individual Stats
         right_panel = QWidget()
         right_panel.setAttribute(Qt.WA_TranslucentBackground, True)
-        right_panel.setFixedWidth(320)
+        right_panel.setFixedWidth(300)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(15)
+        right_layout.setSpacing(12)
         right_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
 
-        # Reactor Core
+        # Reactor Core (sun-like)
         core_container = QWidget()
         core_container.setAttribute(Qt.WA_TranslucentBackground, True)
         core_layout = QHBoxLayout(core_container)
@@ -534,42 +822,23 @@ class JarvisWindow(QMainWindow):
         core_layout.addWidget(self.core)
         right_layout.addWidget(core_container)
 
-        # Stats below core (small)
-        stats_frame = QFrame()
-        stats_frame.setStyleSheet("""
-            QFrame {
-                background: rgba(10, 20, 38, 160);
-                border: 1px solid rgba(0, 255, 255, 40);
-                border-radius: 12px;
-            }
-        """)
-        stats_frame.setFixedWidth(280)
-        stats_layout = QVBoxLayout(stats_frame)
-        stats_layout.setContentsMargins(12, 10, 12, 10)
-        stats_layout.setSpacing(4)
+        # Individual stat holograms
+        self.cpu_stat = StatHoloWidget("CPU", "cpu", QColor(0, 255, 157))
+        self.ram_stat = StatHoloWidget("RAM", "ram", QColor(0, 255, 255))
+        self.bat_stat = StatHoloWidget("BAT", "bat", QColor(241, 196, 15))
+        self.time_stat = StatHoloWidget("TIME", "time", QColor(0, 255, 255))
 
-        stats_title = QLabel("SYSTEM VITALS")
-        stats_title.setStyleSheet("color: #00ffff; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace; letter-spacing: 1px;")
-        stats_layout.addWidget(stats_title)
-
-        self.cpu_label = MiniStat("CPU", QColor(0, 255, 157))
-        self.ram_label = MiniStat("RAM", QColor(0, 255, 255))
-        self.bat_label = MiniStat("BAT", QColor(241, 196, 15))
-        self.time_label = MiniStat("TIME", QColor(0, 255, 255))
-
-        stats_layout.addWidget(self.cpu_label)
-        stats_layout.addWidget(self.ram_label)
-        stats_layout.addWidget(self.bat_label)
-        stats_layout.addWidget(self.time_label)
-
-        right_layout.addWidget(stats_frame, 0, Qt.AlignCenter)
+        right_layout.addWidget(self.cpu_stat, 0, Qt.AlignCenter)
+        right_layout.addWidget(self.ram_stat, 0, Qt.AlignCenter)
+        right_layout.addWidget(self.bat_stat, 0, Qt.AlignCenter)
+        right_layout.addWidget(self.time_stat, 0, Qt.AlignCenter)
         right_layout.addStretch()
 
         content_layout.addWidget(right_panel, 0)
 
         main.addWidget(content, 1)
 
-        # Hidden Chat Panel (shown on "show chat" command)
+        # Hidden Chat Panel
         self.chat_panel = QWidget()
         self.chat_panel.setAttribute(Qt.WA_TranslucentBackground, True)
         chat_panel_layout = QVBoxLayout(self.chat_panel)
@@ -677,7 +946,7 @@ class JarvisWindow(QMainWindow):
         chat_layout.addWidget(input_frame)
         chat_panel_layout.addWidget(self.chat_frame)
 
-        # Control buttons for chat panel
+        # Control buttons
         btn_row = QHBoxLayout()
         btn_row.setSpacing(10)
 
@@ -702,13 +971,8 @@ class JarvisWindow(QMainWindow):
         btn_row.addStretch()
         chat_panel_layout.addLayout(btn_row)
 
-        # Initially hidden
         self.chat_panel.hide()
         main.addWidget(self.chat_panel)
-
-    def _make_stat(self, name, value, color):
-        # Kept for compatibility, not used in new layout
-        pass
 
     @staticmethod
     def _btn_style(accent_hex):
@@ -758,10 +1022,10 @@ class JarvisWindow(QMainWindow):
                 bat_text = "N/A"
             current_time = datetime.now().strftime("%I:%M:%S %p")
 
-            self.cpu_label.setText(f"CPU: {cpu}%")
-            self.ram_label.setText(f"RAM: {ram}%")
-            self.bat_label.setText(f"BAT: {bat_text}")
-            self.time_label.setText(f"TIME: {current_time}")
+            self.cpu_stat.set_value(f"{cpu:.0f}%")
+            self.ram_stat.set_value(f"{ram:.0f}%")
+            self.bat_stat.set_value(bat_text)
+            self.time_stat.set_value(current_time)
         except Exception:
             pass
 
