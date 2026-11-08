@@ -498,39 +498,22 @@ class JarvisWindow(QMainWindow):
 
         content_layout.addLayout(top_row)
 
-        # --- Reactor Core ---
-        core_container = QWidget()
-        core_container.setAttribute(Qt.WA_TranslucentBackground, True)
-        core_layout = QHBoxLayout(core_container)
-        core_layout.setContentsMargins(0, 0, 0, 0)
-        core_layout.setAlignment(Qt.AlignCenter)
+        # --- Split Layout: Left = Chat (smaller), Right = Core + Stats ---
+        split = QHBoxLayout()
+        split.setSpacing(25)
 
-        self.core = ReactorCore()
-        core_layout.addWidget(self.core)
+        # ---- Left Panel: Chat Terminal (smaller) ----
+        left_panel = QWidget()
+        left_panel.setAttribute(Qt.WA_TranslucentBackground, True)
+        left_panel.setMinimumWidth(450)
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(10)
 
-        content_layout.addWidget(core_container)
-
-        # --- Dashboard Row ---
-        dash = QHBoxLayout()
-        dash.setSpacing(15)
-
-        self.cpu_label = self._make_stat("CPU", "0%", QColor(0, 255, 157))
-        self.ram_label = self._make_stat("RAM", "0%", QColor(0, 255, 255))
-        self.bat_label = self._make_stat("BAT", "0%", QColor(241, 196, 15))
-        self.time_label = self._make_stat("TIME", "00:00", QColor(0, 255, 255))
-
-        dash.addWidget(self.cpu_label)
-        dash.addWidget(self.ram_label)
-        dash.addWidget(self.bat_label)
-        dash.addWidget(self.time_label)
-
-        content_layout.addLayout(dash)
-
-        # --- Chat Area ---
         chat_frame = GlassPanel()
         chat_layout = QVBoxLayout(chat_frame)
-        chat_layout.setContentsMargins(20, 15, 20, 15)
-        chat_layout.setSpacing(10)
+        chat_layout.setContentsMargins(18, 12, 18, 12)
+        chat_layout.setSpacing(8)
 
         self.chat_title = QLabel("SYSTEM TERMINAL")
         self.chat_title.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
@@ -569,7 +552,7 @@ class JarvisWindow(QMainWindow):
         input_frame.setFixedHeight(56)
         input_layout = QHBoxLayout(input_frame)
         input_layout.setContentsMargins(20, 0, 16, 0)
-        input_layout.setSpacing(12)
+        input_layout.setSpacing(10)
 
         self.input_field = QLineEdit()
         self.input_field.setPlaceholderText("Type a command or speak to NOVA...")
@@ -628,34 +611,96 @@ class JarvisWindow(QMainWindow):
         input_layout.addWidget(self.send_btn)
 
         chat_layout.addWidget(input_frame)
+        left_layout.addWidget(chat_frame, 1)
 
-        content_layout.addWidget(chat_frame, 1)
-
-        # --- Control Buttons ---
+        # Control buttons on left panel bottom
         btn_row = QHBoxLayout()
-        btn_row.setSpacing(15)
+        btn_row.setSpacing(10)
 
         self.start_btn = QPushButton("▶ START")
-        self.start_btn.setFixedSize(120, 40)
+        self.start_btn.setFixedSize(100, 36)
         self.start_btn.setStyleSheet(self._btn_style("#00ff9d"))
         self.start_btn.clicked.connect(self._start_nova)
         btn_row.addWidget(self.start_btn)
 
         self.stop_btn = QPushButton("■ STOP")
-        self.stop_btn.setFixedSize(120, 40)
+        self.stop_btn.setFixedSize(100, 36)
         self.stop_btn.setStyleSheet(self._btn_style("#e74c3c"))
         self.stop_btn.clicked.connect(self._stop_nova)
         btn_row.addWidget(self.stop_btn)
 
         self.tray_btn = QPushButton("⬇ TRAY")
-        self.tray_btn.setFixedSize(100, 40)
+        self.tray_btn.setFixedSize(90, 36)
         self.tray_btn.setStyleSheet(self._btn_style("#34495e"))
         self.tray_btn.clicked.connect(self._minimize_to_tray)
         btn_row.addWidget(self.tray_btn)
 
         btn_row.addStretch()
+        left_layout.addLayout(btn_row)
 
-        content_layout.addLayout(btn_row)
+        split.addWidget(left_panel, 1)
+
+        # ---- Right Panel: Reactor Core + Stats ----
+        right_panel = QWidget()
+        right_panel.setAttribute(Qt.WA_TranslucentBackground, True)
+        right_panel.setFixedWidth(340)
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(20)
+        right_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+
+        # Reactor Core at top right
+        core_container = QWidget()
+        core_container.setAttribute(Qt.WA_TranslucentBackground, True)
+        core_layout = QHBoxLayout(core_container)
+        core_layout.setContentsMargins(0, 0, 0, 0)
+        core_layout.setAlignment(Qt.AlignCenter)
+
+        self.core = ReactorCore()
+        core_layout.addWidget(self.core)
+        right_layout.addWidget(core_container)
+
+        # Stats below core
+        stats_frame = QFrame()
+        stats_frame.setStyleSheet("""
+            QFrame {
+                background: rgba(10, 20, 38, 160);
+                border: 1px solid rgba(0, 255, 255, 50);
+                border-radius: 16px;
+            }
+        """)
+        stats_frame.setFixedWidth(300)
+        stats_layout = QVBoxLayout(stats_frame)
+        stats_layout.setContentsMargins(15, 15, 15, 15)
+        stats_layout.setSpacing(10)
+
+        stats_title = QLabel("SYSTEM VITALS")
+        stats_title.setStyleSheet("color: #00ffff; font-size: 11px; font-weight: bold; font-family: 'Consolas', monospace; letter-spacing: 1px;")
+        stats_layout.addWidget(stats_title)
+
+        self.cpu_label = self._make_stat("CPU", "0%", QColor(0, 255, 157))
+        self.ram_label = self._make_stat("RAM", "0%", QColor(0, 255, 255))
+        self.bat_label = self._make_stat("BAT", "0%", QColor(241, 196, 15))
+        self.time_label = self._make_stat("TIME", "00:00", QColor(0, 255, 255))
+
+        # Compact stats for right panel
+        for stat in (self.cpu_label, self.ram_label, self.bat_label, self.time_label):
+            stat.setFixedSize(270, 55)
+            stat.value_label.setStyleSheet(
+                stat.value_label.styleSheet().replace("20px", "17px")
+            )
+
+        stats_layout.addWidget(self.cpu_label)
+        stats_layout.addWidget(self.ram_label)
+        stats_layout.addWidget(self.bat_label)
+        stats_layout.addWidget(self.time_label)
+
+        right_layout.addWidget(stats_frame, 0, Qt.AlignCenter)
+        right_layout.addStretch()
+
+        split.addWidget(right_panel, 0)
+
+        content_layout.addLayout(split)
 
         main.addWidget(content, 1)
 
