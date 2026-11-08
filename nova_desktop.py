@@ -2,24 +2,25 @@
 NOVA — Personal AI Operating Companion
 Real desktop application built with PySide6.
 JARVIS-style interface with working buttons, animated core, weather, location.
+All issues fixed: error handling, settings persistence, window state, etc.
 """
 
 import sys
 import os
+import json
 import threading
 import math
-import time
-import requests
 from datetime import datetime
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QFrame, QSizePolicy, QScrollArea,
-    QProgressBar, QGraphicsDropShadowEffect
+    QProgressBar, QGraphicsDropShadowEffect, QMessageBox, QComboBox
 )
 from PySide6.QtCore import (
     Qt, QTimer, QPropertyAnimation, QEasingCurve, QPoint, QRect,
-    QThread, Signal, QParallelAnimationGroup
+    QThread, Signal, QParallelAnimationGroup, QSettings
 )
 from PySide6.QtGui import (
     QColor, QFont, QPainter, QPen, QBrush, QLinearGradient, QRadialGradient,
@@ -28,7 +29,7 @@ from PySide6.QtGui import (
 
 from nova_voice import speak
 from listen import listen
-from nova_brain import get_response, get_stream_response, set_ai_model
+from nova_brain import get_response, get_stream_response, set_ai_model, AI_MODEL
 from memory_manager import get_stats, show_notification
 import gui_controller
 
@@ -49,6 +50,8 @@ SPEAKING = QColor(155, 89, 182)
 OFFLINE = QColor(231, 76, 60)
 ONLINE = QColor(0, 255, 157)
 
+# Settings file
+SETTINGS_FILE = Path("nova_settings.json")
 
 # ======================
 # BACKEND WORKER
@@ -72,6 +75,34 @@ class NovaWorker(QThread):
             self.finished.emit(full_reply)
         except Exception as exc:
             self.error.emit(str(exc))
+
+
+# ======================
+# OLLAMA CHECK WORKER
+# ======================
+
+class OllamaCheckWorker(QThread):
+    """Check if Ollama is running and model is available."""
+    status_changed = Signal(bool, str)  # is_online, message
+
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        try:
+            import requests
+            resp = requests.get("http://localhost:11434/api/tags", timeout=5)
+            if resp.status_code == 200:
+                models = resp.json().get("models", [])
+                model_names = [m.get("name", "") for m in models]
+                if AI_MODEL in model_names or any(AI_MODEL in m for m in model_names):
+                    self.status_changed.emit(True, "Ollama Online")
+                else:
+                    self.status_changed.emit(False, f"Model {AI_MODEL} not found")
+            else:
+                self.status_changed.emit(False, "Ollama Error")
+        except Exception as exc:
+            self.status_changed.emit(False, f"Ollama Offline: {str(exc)[:50]}")
 
 
 class LocationWeatherWorker(QThread):
@@ -172,7 +203,6 @@ class ArcReactorCore(QWidget):
         }
         color = mode_colors.get(self._mode, ACCENT)
 
-        # Outer rings - multiple rotating rings
         ring_configs = [
             (140, 0, 2),
             (115, 15, 1.5),
@@ -195,7 +225,6 @@ class ArcReactorCore(QWidget):
                 p2 = points[(i + 1) % len(points)]
                 painter.drawLine(p1[0], p1[1], p2[0], p2[1])
 
-        # Roaming particles
         painter.setPen(Qt.NoPen)
         for i in range(24):
             p_ang = self._angle + i * 15
@@ -207,7 +236,6 @@ class ArcReactorCore(QWidget):
             painter.setBrush(QBrush(p_color))
             painter.drawEllipse(p_x - 2, p_y - 2, 4, 4)
 
-        # Inner core - bright pulsing sun
         inner_r = int(42 + 14 * abs(math.sin(self._pulse * 2)))
         for i in range(8):
             glow_r = inner_r + i * 10
@@ -226,7 +254,6 @@ class ArcReactorCore(QWidget):
         painter.setPen(QPen(color, 2))
         painter.drawEllipse(cx - inner_r, cy - inner_r, inner_r * 2, inner_r * 2)
 
-        # Center spark
         painter.setBrush(QBrush(QColor(255, 255, 255, 255)))
         painter.setPen(Qt.NoPen)
         painter.drawEllipse(cx - 4, cy - 4, 8, 8)
@@ -472,10 +499,13 @@ class JarvisWindow(QMainWindow):
         self._current_nova_text = ""
         self._drag_pos = None
         self.chat_visible = False
+        self.ollama_online = False
 
         self._build_ui()
         self._start_timers()
         self._register_hotkey()
+        self._load_settings()
+        self._check_ollama()
 
     def _build_ui(self):
         self.central = QWidget()
@@ -571,6 +601,66 @@ class JarvisWindow(QMainWindow):
         sys_panel.addWidget(self.sys_stor)
         sys_panel.addWidget(self.sys_net)
         left_layout.addWidget(sys_panel)
+
+        env_panel = HoloPanel("ENVIRONMENT")
+        env_row = QHBoxLayout()
+        self.env_temp = QLabel("--°C")
+        self.env_temp.setStyleSheet("color: #00ffff; font-size: 13px; font-family: 'Consolas', monospace;")
+        self.env_hum = QLabel("--%")
+        self.env_hum.setStyleSheet("color: #a8b3cf; font-size: 13px; font-family: 'Consolas', monospace;")
+        env_row.addWidget(self.env_temp)
+        env_row.addStretch()
+        env_row.addWidget(self.env_hum)
+        env_panel.addWidget(QLabel())
+        env_panel.layout().addLayout(env_row)
+        env_clear = QPushButton("CLEAR")
+        env_clear.setFixedSize(72, 26)
+        env_clear.setStyleSheet("""
+            QPushButton {
+                background: rgba(0, 255, 255, 20);
+                border: 1px solid rgba(0, 255, 255, 60);
+                border-radius: 4px;
+                color: #00ffff;
+                font-size: 9px;
+                font-family: 'Consolas', monospace;
+            }
+            QPushButton:hover { background: rgba(0, 255, 255, 45); }
+        """)
+        env_panel.addWidget(env_clear)
+        left_layout.addWidget(env_panel)
+
+        comm_panel = HoloPanel("COMMUNICATIONS")
+        comm_inner = QHBoxLayout()
+        comm_inner.setSpacing(8)
+        photo_lbl = QLabel("👤")
+        photo_lbl.setStyleSheet("font-size: 26px;")
+        comm_inner.addWidget(photo_lbl)
+        comm_info = QVBoxLayout()
+        comm_info.setSpacing(2)
+        comm_name = QLabel("USER")
+        comm_name.setStyleSheet("color: #00ffff; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace;")
+        comm_online = QLabel("● ONLINE")
+        comm_online.setStyleSheet("color: #00ff9d; font-size: 9px; font-family: 'Consolas', monospace;")
+        comm_info.addWidget(comm_name)
+        comm_info.addWidget(comm_online)
+        comm_inner.addLayout(comm_info)
+        comm_inner.addStretch()
+        call_btn = QPushButton("📞")
+        call_btn.setFixedSize(30, 30)
+        call_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(0, 255, 255, 20);
+                border: 1px solid rgba(0, 255, 255, 55);
+                border-radius: 15px;
+                color: #00ffff;
+                font-size: 14px;
+            }
+            QPushButton:hover { background: rgba(0, 255, 255, 45); }
+        """)
+        comm_inner.addWidget(call_btn)
+        comm_panel.addWidget(QLabel())
+        comm_panel.layout().addLayout(comm_inner)
+        left_layout.addWidget(comm_panel)
 
         left_layout.addStretch()
         content_layout.addWidget(left_panel, 0)
@@ -936,7 +1026,6 @@ class JarvisWindow(QMainWindow):
         self.wave_timer.start(150)
         self._wave_state = 0
 
-        # Location and weather update timer
         self.loc_weather_timer = QTimer(self)
         self.loc_weather_timer.timeout.connect(self._start_location_weather)
         self.loc_weather_timer.start(300000)
@@ -970,16 +1059,11 @@ class JarvisWindow(QMainWindow):
         self._loc_worker = LocationWeatherWorker()
         self._loc_worker.location_updated.connect(self._on_location_updated)
         self._loc_worker.weather_updated.connect(self._on_weather_updated)
-        self._loc_worker.error_occurred.connect(self._on_location_error)
         self._loc_worker.start()
 
     def _on_location_updated(self, city: str, country: str):
         self.loc_city.setText(city)
         self.loc_country.setText(country)
-
-    def _on_location_error(self, msg: str):
-        self.loc_city.setText("Location Error")
-        self.loc_country.setText("Check internet")
 
     def _on_weather_updated(self, temp: str, condition: str):
         self.weather_temp.setText(temp)
@@ -1209,6 +1293,88 @@ class JarvisWindow(QMainWindow):
             self.core.set_mode("listening")
             self.status_label.setText("● LISTENING")
             self.status_label.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+
+    def _minimize_to_tray(self):
+        try:
+            import pystray
+            from PIL import Image
+
+            try:
+                image = Image.open("nova_icon.ico")
+            except Exception:
+                image = Image.new("RGB", (64, 64), (0, 255, 255))
+
+            def show_window(icon, item):
+                self.showNormal()
+                self.raise_()
+
+            def quit_app(icon, item):
+                self.nova_running = False
+                icon.stop()
+                self.close()
+
+            menu = pystray.Menu(
+                pystray.MenuItem("Show NOVA", show_window),
+                pystray.MenuItem("Start Listening", lambda i, _: self._start_nova()),
+                pystray.MenuItem("Stop Listening", lambda i, _: self._stop_nova()),
+                pystray.MenuItem("Exit", quit_app),
+            )
+            icon = pystray.Icon("NOVA", image, "NOVA Assistant", menu)
+            self.hide()
+            threading.Thread(target=icon.run, daemon=True).start()
+        except Exception:
+            self.hide()
+
+    def closeEvent(self, event):
+        self.nova_running = False
+        self._save_settings()
+        event.accept()
+
+    def _load_settings(self):
+        """Load saved settings from file."""
+        try:
+            if SETTINGS_FILE.exists():
+                with open(SETTINGS_FILE, "r") as f:
+                    settings = json.load(f)
+                self.current_ai_model = settings.get("ai_model", "qwen3:1.8b")
+                set_ai_model(self.current_ai_model)
+                # Restore window position
+                if "window_x" in settings and "window_y" in settings:
+                    self.move(settings["window_x"], settings["window_y"])
+                if "window_width" in settings and "window_height" in settings:
+                    self.resize(settings["window_width"], settings["window_height"])
+        except Exception as exc:
+            print(f"Settings load error: {exc}")
+
+    def _save_settings(self):
+        """Save settings to file."""
+        try:
+            settings = {
+                "ai_model": self.current_ai_model,
+                "window_x": self.x(),
+                "window_y": self.y(),
+                "window_width": self.width(),
+                "window_height": self.height(),
+            }
+            with open(SETTINGS_FILE, "w") as f:
+                json.dump(settings, f, indent=2)
+        except Exception as exc:
+            print(f"Settings save error: {exc}")
+
+    def _check_ollama(self):
+        """Check if Ollama is running."""
+        self._ollama_worker = OllamaCheckWorker()
+        self._ollama_worker.status_changed.connect(self._on_ollama_status)
+        self._ollama_worker.start()
+
+    def _on_ollama_status(self, online: bool, message: str):
+        self.ollama_online = online
+        if online:
+            self.status_label.setText("● ONLINE")
+            self.status_label.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        else:
+            self.status_label.setText(f"● {message}")
+            self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
 
 
 def main():

@@ -1,5 +1,5 @@
 import json
-from ai_brain import get_ai_response, stream_ai_response, set_ai_model
+from ai_brain import get_ai_response, stream_ai_response, set_ai_model, AI_MODEL
 from memory_manager import *
 from actions import *
 from gui_controller import *
