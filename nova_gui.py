@@ -170,12 +170,14 @@ class GlassPanel(QFrame):
 # ======================
 
 class ChatBubble(QFrame):
-    """A single chat message bubble with glass styling."""
+    """A floating chat message bubble that fades in and drifts away."""
 
-    def __init__(self, text: str, is_user: bool = False):
+    def __init__(self, text: str, is_user: bool = False, ttl_ms: int = 9000):
         super().__init__()
         self.is_user = is_user
+        self.ttl_ms = ttl_ms
         self._setup_ui(text)
+        self._start_floating_animation()
 
     def _setup_ui(self, text: str):
         layout = QHBoxLayout(self)
@@ -220,6 +222,62 @@ class ChatBubble(QFrame):
         self.setSizePolicy(
             QSizePolicy.Preferred, QSizePolicy.Maximum
         )
+
+        # Start fully transparent for fade-in
+        self.setWindowOpacity(0.0)
+
+    # ------------------------------------------------------------------
+    # Floating / fade animation
+    # ------------------------------------------------------------------
+    def _start_floating_animation(self):
+        # Fade in
+        self._fade_in = QPropertyAnimation(self, b"windowOpacity", self)
+        self._fade_in.setDuration(600)
+        self._fade_in.setStartValue(0.0)
+        self._fade_in.setEndValue(1.0)
+        self._fade_in.setEasingCurve(QEasingCurve.OutCubic)
+
+        # Float upward slightly as we fade in
+        self._float_up = QPropertyAnimation(self, b"pos", self)
+        self._float_up.setDuration(700)
+        self._float_up.setStartValue(self.pos() + QPoint(0, 12))
+        self._float_up.setEndValue(self.pos())
+        self._float_up.setEasingCurve(QEasingCurve.OutCubic)
+
+        self._group = QParallelAnimationGroup(self)
+        self._group.addAnimation(self._fade_in)
+        self._group.addAnimation(self._float_up)
+        self._group.start()
+
+        # After TTL, fade out and remove
+        QTimer.singleShot(self.ttl_ms, self._fade_out_and_remove)
+
+    def _fade_out_and_remove(self):
+        self._fade_out = QPropertyAnimation(self, b"windowOpacity", self)
+        self._fade_out.setDuration(800)
+        self._fade_out.setStartValue(1.0)
+        self._fade_out.setEndValue(0.0)
+        self._fade_out.setEasingCurve(QEasingCurve.InCubic)
+
+        # Drift further up as fading out
+        self._drift = QPropertyAnimation(self, b"pos", self)
+        self._drift.setDuration(900)
+        self._drift.setStartValue(self.pos())
+        self._drift.setEndValue(self.pos() + QPoint(0, -20))
+        self._drift.setEasingCurve(QEasingCurve.InCubic)
+
+        self._out_group = QParallelAnimationGroup(self)
+        self._out_group.addAnimation(self._fade_out)
+        self._out_group.addAnimation(self._drift)
+        self._out_group.finished.connect(self._remove_self)
+        self._out_group.start()
+
+    def _remove_self(self):
+        # Notify parent layout to clean up
+        parent_layout = self.parentWidget().layout() if self.parentWidget() else None
+        if parent_layout:
+            parent_layout.removeWidget(self)
+        self.deleteLater()
 
 
 # ======================
