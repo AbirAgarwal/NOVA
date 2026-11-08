@@ -4,7 +4,7 @@ import psutil
 from datetime import datetime
 from nova_voice import speak
 from listen import listen
-from nova_brain import get_response
+from nova_brain import get_response, get_stream_response
 from memory_manager import get_stats,show_notification
 import pystray
 from PIL import Image
@@ -393,7 +393,10 @@ def nova_loop():
 
         set_status("thinking")
 
-        response = get_response(text)
+        response = ""
+
+        for chunk in get_stream_response(text):
+            response += chunk
 
         # Voice Exit
         if response == "EXIT_NOVA":
@@ -405,9 +408,7 @@ def nova_loop():
 
             set_status("offline")
 
-            speak(
-                "Shutting down"
-            )
+            speak("Shutting down")
 
             root.after(
                 0,

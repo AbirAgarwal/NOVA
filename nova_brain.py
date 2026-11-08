@@ -1,5 +1,5 @@
 import json
-from ai_brain import get_ai_response
+from ai_brain import get_ai_response, stream_ai_response
 from memory_manager import *
 from actions import *
 from gui_controller import *
@@ -722,3 +722,35 @@ def get_response(text):
     # ======================
 
     return get_ai_response(text)
+
+def get_stream_response(text):
+
+    command_keywords = [
+        "open",
+        "close",
+        "create",
+        "delete",
+        "show",
+        "list",
+        "add",
+        "task",
+        "project",
+        "note",
+        "journal",
+        "shutdown",
+        "restart",
+        "sleep",
+        "lock",
+        "volume",
+        "screenshot",
+        "briefing",
+        "status report"
+    ]
+
+    if any(word in text.lower() for word in command_keywords):
+
+        yield get_response(text)
+        return
+
+    for chunk in stream_ai_response(text):
+        yield chunk
