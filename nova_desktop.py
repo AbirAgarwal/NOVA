@@ -1,7 +1,7 @@
 """
 NOVA — Personal AI Operating Companion
 Real desktop application built with PySide6.
-Jarvis-style interface with working buttons, animated core, weather, and location.
+JARVIS-style interface with working buttons, animated core, weather, location.
 """
 
 import sys
@@ -76,83 +76,61 @@ class NovaWorker(QThread):
 
 class LocationWeatherWorker(QThread):
     """Fetch real location and weather data from free APIs."""
-    location_updated = Signal(str, str)  # city, country
-    weather_updated = Signal(str, str)   # temp, condition
+    location_updated = Signal(str, str)
+    weather_updated = Signal(str, str)
+    error_occurred = Signal(str)
 
     def __init__(self):
         super().__init__()
-        self._running = True
 
     def run(self):
-        while self._running:
-            try:
-                # Get location from IP
-                resp = requests.get("https://ipapi.co/json/", timeout=10)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    city = data.get("city", "Unknown")
-                    country = data.get("country_name", "Unknown")
-                    lat = data.get("latitude")
-                    lon = data.get("longitude")
-                    self.location_updated.emit(city, country)
+        try:
+            # Get location from IP
+            resp = requests.get("https://ipapi.co/json/", timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                city = data.get("city", "Unknown")
+                country = data.get("country_name", "Unknown")
+                lat = data.get("latitude")
+                lon = data.get("longitude")
+                self.location_updated.emit(city, country)
 
-                    # Get weather from Open-Meteo (free, no API key)
-                    if lat and lon:
-                        weather_resp = requests.get(
-                            f"https://api.open-meteo.com/v1/forecast?"
-                            f"latitude={lat}&longitude={lon}"
-                            f"&current_weather=true",
-                            timeout=10
-                        )
-                        if weather_resp.status_code == 200:
-                            wdata = weather_resp.json()
-                            current = wdata.get("current_weather", {})
-                            temp = current.get("temperature", "?")
-                            condition = current.get("weathercode", 0)
-                            weather_text = self._weather_code_to_text(condition)
-                            self.weather_updated.emit(f"{temp}°C", weather_text)
-            except Exception as exc:
-                print(f"Location/Weather error: {exc}")
-
-            self._running = False  # Run once, then stop (will be restarted by timer)
-            break
+                # Get weather from Open-Meteo (free, no API key)
+                if lat and lon:
+                    weather_resp = requests.get(
+                        f"https://api.open-meteo.com/v1/forecast?"
+                        f"latitude={lat}&longitude={lon}"
+                        f"&current_weather=true",
+                        timeout=10
+                    )
+                    if weather_resp.status_code == 200:
+                        wdata = weather_resp.json()
+                        current = wdata.get("current_weather", {})
+                        temp = current.get("temperature", "?")
+                        condition_code = current.get("weathercode", 0)
+                        condition = self._weather_code_to_text(condition_code)
+                        self.weather_updated.emit(f"{temp}°C", condition)
+            else:
+                self.error_occurred.emit("Location API failed")
+        except Exception as exc:
+            self.error_occurred.emit(str(exc))
 
     def _weather_code_to_text(self, code: int) -> str:
-        """Convert WMO weather code to text."""
         codes = {
-            0: "Clear sky",
-            1: "Mainly clear",
-            2: "Partly cloudy",
-            3: "Overcast",
-            45: "Foggy",
-            48: "Depositing rime fog",
-            51: "Light drizzle",
-            53: "Moderate drizzle",
-            55: "Heavy drizzle",
-            56: "Light freezing drizzle",
-            57: "Heavy freezing drizzle",
-            61: "Light rain",
-            63: "Moderate rain",
-            65: "Heavy rain",
-            66: "Light freezing rain",
-            67: "Heavy freezing rain",
-            71: "Light snow",
-            73: "Moderate snow",
-            75: "Heavy snow",
-            77: "Snow grains",
-            80: "Light rain showers",
-            81: "Moderate rain showers",
-            82: "Heavy rain showers",
-            85: "Light snow showers",
-            86: "Heavy snow showers",
-            95: "Thunderstorm",
-            96: "Thunderstorm with hail",
+            0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy",
+            3: "Overcast", 45: "Foggy", 48: "Depositing rime fog",
+            51: "Light drizzle", 53: "Moderate drizzle", 55: "Heavy drizzle",
+            56: "Light freezing drizzle", 57: "Heavy freezing drizzle",
+            61: "Light rain", 63: "Moderate rain", 65: "Heavy rain",
+            66: "Light freezing rain", 67: "Heavy freezing rain",
+            71: "Light snow", 73: "Moderate snow", 75: "Heavy snow",
+            77: "Snow grains", 80: "Light rain showers",
+            81: "Moderate rain showers", 82: "Heavy rain showers",
+            85: "Light snow showers", 86: "Heavy snow showers",
+            95: "Thunderstorm", 96: "Thunderstorm with hail",
             99: "Thunderstorm with heavy hail",
         }
         return codes.get(code, "Unknown")
-
-    def stop(self):
-        self._running = False
 
 
 # ======================
@@ -160,8 +138,6 @@ class LocationWeatherWorker(QThread):
 # ======================
 
 class ArcReactorCore(QWidget):
-    """Jarvis-style arc reactor with smooth continuous animation."""
-
     def __init__(self):
         super().__init__()
         self.setFixedSize(340, 340)
@@ -170,16 +146,16 @@ class ArcReactorCore(QWidget):
         self._mode = "online"
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._animate)
-        self._timer.start(16)  # ~60fps for smooth animation
+        self._timer.start(16)
 
     def set_mode(self, mode: str):
         self._mode = mode
         self.update()
 
     def _animate(self):
-        self._angle = (self._angle + 1.5) % 360  # Smaller increment for smoothness
+        self._angle = (self._angle + 1.5) % 360
         self._pulse = (self._pulse + 0.1) % (math.pi * 2)
-        self.repaint()  # Immediate repaint for smooth animation
+        self.repaint()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -207,7 +183,7 @@ class ArcReactorCore(QWidget):
             painter.setPen(QPen(color, int(thickness)))
             painter.setBrush(Qt.NoBrush)
             points = []
-            for i in range(0, 360, 3):  # Smaller step for smoother circles
+            for i in range(0, 360, 3):
                 ang = math.radians(i)
                 x = ring_r * math.cos(ang)
                 y = ring_r * math.sin(ang) * math.cos(tilt_rad)
@@ -219,11 +195,11 @@ class ArcReactorCore(QWidget):
                 p2 = points[(i + 1) % len(points)]
                 painter.drawLine(p1[0], p1[1], p2[0], p2[1])
 
-        # Roaming particles - smoother movement
+        # Roaming particles
         painter.setPen(Qt.NoPen)
         for i in range(24):
             p_ang = self._angle + i * 15
-            p_dist = 100 + 20 * math.sin(math.radians(self._angle + i * 30))
+            p_dist = 100 + 20 * math.sin(math.radians(self._angle + i * 40))
             p_x = cx + int(p_dist * math.cos(math.radians(p_ang)))
             p_y = cy + int(p_dist * 0.5 * math.sin(math.radians(p_ang)))
             alpha = int(120 + 135 * math.sin(self._pulse + p_ang * 0.5))
@@ -250,12 +226,10 @@ class ArcReactorCore(QWidget):
         painter.setPen(QPen(color, 2))
         painter.drawEllipse(cx - inner_r, cy - inner_r, inner_r * 2, inner_r * 2)
 
-        # Center spark - brighter and more prominent
+        # Center spark
         painter.setBrush(QBrush(QColor(255, 255, 255, 255)))
         painter.setPen(Qt.NoPen)
         painter.drawEllipse(cx - 4, cy - 4, 8, 8)
-
-
 
 
 # ======================
@@ -263,8 +237,6 @@ class ArcReactorCore(QWidget):
 # ======================
 
 class HoloPanel(QFrame):
-    """Glassmorphism panel with neon border."""
-
     def __init__(self, title: str = "", parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -488,8 +460,8 @@ class JarvisWindow(QMainWindow):
         gui_controller.GUI_ROOT = self
 
         self.setWindowTitle("NOVA — Personal AI Operating Companion")
-        self.resize(1600, 900)
-        self.setMinimumSize(1400, 800)
+        self.resize(1400, 800)
+        self.setMinimumSize(1200, 700)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
 
@@ -511,7 +483,7 @@ class JarvisWindow(QMainWindow):
         self.setCentralWidget(self.central)
 
         main = QVBoxLayout(self.central)
-        main.setContentsMargins(35, 30, 35, 30)
+        main.setContentsMargins(30, 25, 30, 25)
         main.setSpacing(20)
 
         # Title Bar
@@ -571,7 +543,7 @@ class JarvisWindow(QMainWindow):
         # Left Panel
         left_panel = QWidget()
         left_panel.setAttribute(Qt.WA_TranslucentBackground, True)
-        left_panel.setFixedWidth(300)
+        left_panel.setFixedWidth(280)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(15)
@@ -600,66 +572,6 @@ class JarvisWindow(QMainWindow):
         sys_panel.addWidget(self.sys_net)
         left_layout.addWidget(sys_panel)
 
-        env_panel = HoloPanel("ENVIRONMENT")
-        env_row = QHBoxLayout()
-        self.env_temp = QLabel("--°C")
-        self.env_temp.setStyleSheet("color: #00ffff; font-size: 13px; font-family: 'Consolas', monospace;")
-        self.env_hum = QLabel("--%")
-        self.env_hum.setStyleSheet("color: #a8b3cf; font-size: 13px; font-family: 'Consolas', monospace;")
-        env_row.addWidget(self.env_temp)
-        env_row.addStretch()
-        env_row.addWidget(self.env_hum)
-        env_panel.addWidget(QLabel())
-        env_panel.layout().addLayout(env_row)
-        env_clear = QPushButton("CLEAR")
-        env_clear.setFixedSize(72, 26)
-        env_clear.setStyleSheet("""
-            QPushButton {
-                background: rgba(0, 255, 255, 20);
-                border: 1px solid rgba(0, 255, 255, 60);
-                border-radius: 4px;
-                color: #00ffff;
-                font-size: 9px;
-                font-family: 'Consolas', monospace;
-            }
-            QPushButton:hover { background: rgba(0, 255, 255, 45); }
-        """)
-        env_panel.addWidget(env_clear)
-        left_layout.addWidget(env_panel)
-
-        comm_panel = HoloPanel("COMMUNICATIONS")
-        comm_inner = QHBoxLayout()
-        comm_inner.setSpacing(8)
-        photo_lbl = QLabel("👤")
-        photo_lbl.setStyleSheet("font-size: 26px;")
-        comm_inner.addWidget(photo_lbl)
-        comm_info = QVBoxLayout()
-        comm_info.setSpacing(2)
-        comm_name = QLabel("USER")
-        comm_name.setStyleSheet("color: #00ffff; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace;")
-        comm_online = QLabel("● ONLINE")
-        comm_online.setStyleSheet("color: #00ff9d; font-size: 9px; font-family: 'Consolas', monospace;")
-        comm_info.addWidget(comm_name)
-        comm_info.addWidget(comm_online)
-        comm_inner.addLayout(comm_info)
-        comm_inner.addStretch()
-        call_btn = QPushButton("📞")
-        call_btn.setFixedSize(30, 30)
-        call_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(0, 255, 255, 20);
-                border: 1px solid rgba(0, 255, 255, 55);
-                border-radius: 15px;
-                color: #00ffff;
-                font-size: 14px;
-            }
-            QPushButton:hover { background: rgba(0, 255, 255, 45); }
-        """)
-        comm_inner.addWidget(call_btn)
-        comm_panel.addWidget(QLabel())
-        comm_panel.layout().addLayout(comm_inner)
-        left_layout.addWidget(comm_panel)
-
         left_layout.addStretch()
         content_layout.addWidget(left_panel, 0)
 
@@ -685,7 +597,7 @@ class JarvisWindow(QMainWindow):
         # Right Panel
         right_panel = QWidget()
         right_panel.setAttribute(Qt.WA_TranslucentBackground, True)
-        right_panel.setFixedWidth(340)
+        right_panel.setFixedWidth(320)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(12)
@@ -1027,8 +939,8 @@ class JarvisWindow(QMainWindow):
         # Location and weather update timer
         self.loc_weather_timer = QTimer(self)
         self.loc_weather_timer.timeout.connect(self._start_location_weather)
-        self.loc_weather_timer.start(300000)  # Update every 5 minutes
-        self._start_location_weather()  # Fetch immediately on startup
+        self.loc_weather_timer.start(300000)
+        self._start_location_weather()
 
     def _animate_wave(self):
         states = ["▁▃▅▇▅▃▁", "▁▂▃▄▅▆▇", "▇▆▅▄▃▂▁", "▁▃▅▇▅▃▁"]
@@ -1055,19 +967,21 @@ class JarvisWindow(QMainWindow):
             pass
 
     def _start_location_weather(self):
-        """Start location and weather fetch in background thread."""
         self._loc_worker = LocationWeatherWorker()
         self._loc_worker.location_updated.connect(self._on_location_updated)
         self._loc_worker.weather_updated.connect(self._on_weather_updated)
+        self._loc_worker.error_occurred.connect(self._on_location_error)
         self._loc_worker.start()
 
     def _on_location_updated(self, city: str, country: str):
-        """Update location labels."""
         self.loc_city.setText(city)
         self.loc_country.setText(country)
 
+    def _on_location_error(self, msg: str):
+        self.loc_city.setText("Location Error")
+        self.loc_country.setText("Check internet")
+
     def _on_weather_updated(self, temp: str, condition: str):
-        """Update weather labels."""
         self.weather_temp.setText(temp)
         self.weather_condition.setText(condition)
 
