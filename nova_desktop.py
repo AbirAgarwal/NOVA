@@ -1,21 +1,19 @@
 """
 NOVA — Personal AI Operating Companion
-JARVIS-style desktop application built with PySide6.
-Real desktop app — not a website.
+Real desktop application built with PySide6.
+Jarvis-style interface with working buttons, animated core, weather, and location.
 """
 
 import sys
 import os
 import threading
-import time
 import math
-import random
 from datetime import datetime
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QFrame, QSizePolicy, QScrollArea,
-    QProgressBar, QGraphicsDropShadowEffect, QSizeGrip
+    QProgressBar, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import (
     Qt, QTimer, QPropertyAnimation, QEasingCurve, QPoint, QRect,
@@ -23,7 +21,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QColor, QFont, QPainter, QPen, QBrush, QLinearGradient, QRadialGradient,
-    QConicalGradient, QPainterPath, QFontDatabase
+    QConicalGradient, QPainterPath
 )
 
 from nova_voice import speak
@@ -34,17 +32,15 @@ import gui_controller
 
 
 # ======================
-# JARVIS COLOR PALETTE
+# NOVA COLOR PALETTE
 # ======================
 
 BG_DARK = QColor(5, 10, 20)
 PANEL = QColor(15, 25, 40, 220)
-PANEL_LIGHT = QColor(25, 35, 55, 180)
 ACCENT = QColor(0, 255, 255)      # Cyan neon
 ACCENT_DIM = QColor(0, 150, 200)
 TEXT = QColor(230, 240, 255)
 TEXT_DIM = QColor(130, 150, 180)
-GLOW = QColor(0, 255, 255, 60)
 SUCCESS = QColor(0, 255, 157)
 THINKING = QColor(241, 196, 15)
 SPEAKING = QColor(155, 89, 182)
@@ -81,25 +77,25 @@ class NovaWorker(QThread):
 # ======================
 
 class ArcReactorCore(QWidget):
-    """Jarvis-style arc reactor in the center."""
+    """Jarvis-style arc reactor with smooth animations and multiple layers."""
 
     def __init__(self):
         super().__init__()
-        self.setFixedSize(300, 300)
+        self.setFixedSize(340, 340)
         self._angle = 0.0
         self._pulse = 0.0
         self._mode = "online"
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._animate)
-        self._timer.start(30)
+        self._timer.start(25)
 
     def set_mode(self, mode: str):
         self._mode = mode
         self.update()
 
     def _animate(self):
-        self._angle = (self._angle + 2.5) % 360
-        self._pulse = (self._pulse + 0.08) % (math.pi * 2)
+        self._angle = (self._angle + 3) % 360
+        self._pulse = (self._pulse + 0.09) % (math.pi * 2)
         self.update()
 
     def paintEvent(self, event):
@@ -117,31 +113,56 @@ class ArcReactorCore(QWidget):
         }
         color = mode_colors.get(self._mode, ACCENT)
 
-        # Outer rings
-        for i in range(4):
-            ring_r = 140 - (i * 25)
-            alpha = int(50 * (1 - i * 0.2)) + int(40 * abs(__import__("math").sin(self._pulse)))
-            glow = QColor(color.red(), color.green(), color.blue(), alpha)
-            painter.setPen(QPen(glow, 2))
+        # Outer rings - multiple rotating rings
+        ring_configs = [
+            (140, 0, 2),
+            (115, 15, 1.5),
+            (95, -20, 1),
+        ]
+        for ring_r, tilt, thickness in ring_configs:
+            tilt_rad = math.radians(tilt + self._angle * 0.3)
+            painter.setPen(QPen(color, int(thickness)))
             painter.setBrush(Qt.NoBrush)
-            painter.drawEllipse(cx - ring_r, cy - ring_r, ring_r * 2, ring_r * 2)
+            points = []
+            for i in range(0, 360, 5):
+                ang = math.radians(i)
+                x = ring_r * math.cos(ang)
+                y = ring_r * math.sin(ang) * math.cos(tilt_rad)
+                f = 1.0 / (1.0 + 0)
+                px = cx + int(x * f)
+                py = cy + int(y * f * 0.55)
+                points.append((px, py))
+            for i in range(len(points)):
+                p1 = points[i]
+                p2 = points[(i + 1) % len(points)]
+                painter.drawLine(p1[0], p1[1], p2[0], p2[1])
 
-        # Rotating inner ring
-        painter.setPen(QPen(color, 3))
-        painter.setBrush(Qt.NoBrush)
-        for i in range(8):
-            ang = self._angle + i * 45
-            x1 = cx + int(90 * __import__("math").cos(__import__("math").radians(ang)))
-            y1 = cy + int(90 * __import__("math").sin(__import__("math").radians(ang)))
-            x2 = cx + int(120 * __import__("math").cos(__import__("math").radians(ang)))
-            y2 = cy + int(120 * __import__("math").sin(__import__("math").radians(ang)))
-            painter.drawLine(x1, y1, x2, y2)
+        # Roaming particles
+        painter.setPen(Qt.NoPen)
+        for i in range(20):
+            p_ang = self._angle + i * 18
+            p_dist = 100 + 25 * math.sin(math.radians(self._angle + i * 40))
+            p_x = cx + int(p_dist * math.cos(math.radians(p_ang)))
+            p_y = cy + int(p_dist * 0.5 * math.sin(math.radians(p_ang)))
+            alpha = int(100 + 120 * math.sin(self._pulse + p_ang * 0.5))
+            p_color = QColor(color.red(), color.green(), color.blue(), alpha)
+            painter.setBrush(QBrush(p_color))
+            painter.drawEllipse(p_x - 2, p_y - 2, 4, 4)
 
-        # Inner core
-        inner_r = int(35 + 10 * abs(__import__("math").sin(self._pulse * 2)))
+        # Inner core - bright pulsing sun
+        inner_r = int(40 + 12 * abs(math.sin(self._pulse * 2)))
+        for i in range(6):
+            glow_r = inner_r + i * 8
+            alpha = int(40 * (1 - i * 0.15)) + int(30 * abs(math.sin(self._pulse)))
+            glow = QColor(color.red(), color.green(), color.blue(), alpha)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(glow))
+            painter.drawEllipse(cx - glow_r, cy - glow_r, glow_r * 2, glow_r * 2)
+
         grad = QRadialGradient(cx, cy, inner_r)
-        grad.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 255))
-        grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 40))
+        grad.setColorAt(0, QColor(255, 255, 255, 255))
+        grad.setColorAt(0.35, QColor(color.red(), color.green(), color.blue(), 230))
+        grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 50))
         painter.setBrush(QBrush(grad))
         painter.setPen(QPen(color, 2))
         painter.drawEllipse(cx - inner_r, cy - inner_r, inner_r * 2, inner_r * 2)
@@ -372,7 +393,7 @@ class TypingIndicator(QWidget):
 
 
 # ======================
-# MAIN JARVIS WINDOW
+# MAIN NOVA WINDOW
 # ======================
 
 class JarvisWindow(QMainWindow):
@@ -381,7 +402,7 @@ class JarvisWindow(QMainWindow):
 
         gui_controller.GUI_ROOT = self
 
-        self.setWindowTitle("NOVA — JARVIS Interface")
+        self.setWindowTitle("NOVA — Personal AI Operating Companion")
         self.resize(1600, 900)
         self.setMinimumSize(1400, 800)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
@@ -415,7 +436,7 @@ class JarvisWindow(QMainWindow):
         title_layout = QHBoxLayout(title_bar)
         title_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.title_label = QLabel("JARVIS")
+        self.title_label = QLabel("NOVA")
         self.title_label.setStyleSheet("font-size: 26px; font-weight: bold; color: #00ffff; letter-spacing: 4px; font-family: 'Consolas', monospace;")
         title_layout.addWidget(self.title_label)
 
@@ -479,7 +500,7 @@ class JarvisWindow(QMainWindow):
         status_lbl = QLabel("ACTIVE")
         status_lbl.setStyleSheet("color: #00ff9d; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace;")
         voice_inner.addWidget(status_lbl)
-        voice_panel.addWidget(QLabel())  # spacer
+        voice_panel.addWidget(QLabel())
         voice_panel.layout().addLayout(voice_inner)
         left_layout.addWidget(voice_panel)
 
@@ -529,7 +550,7 @@ class JarvisWindow(QMainWindow):
         comm_inner.addWidget(photo_lbl)
         comm_info = QVBoxLayout()
         comm_info.setSpacing(2)
-        comm_name = QLabel("FEDER PEDRO")
+        comm_name = QLabel("USER")
         comm_name.setStyleSheet("color: #00ffff; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace;")
         comm_online = QLabel("● ONLINE")
         comm_online.setStyleSheet("color: #00ff9d; font-size: 9px; font-family: 'Consolas', monospace;")
@@ -605,19 +626,24 @@ class JarvisWindow(QMainWindow):
         right_layout.addWidget(cpu_panel)
 
         loc_panel = HoloPanel("LOCATION")
-        map_lbl = QLabel("🗺")
-        map_lbl.setStyleSheet("font-size: 36px; color: rgba(0, 255, 255, 45);")
-        map_lbl.setAlignment(Qt.AlignCenter)
-        loc_panel.addWidget(map_lbl)
-        loc_city = QLabel("NEW YORK, NY")
-        loc_city.setStyleSheet("color: #e6f0ff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
-        loc_city.setAlignment(Qt.AlignCenter)
-        loc_panel.addWidget(loc_city)
-        loc_pin = QLabel("📍")
-        loc_pin.setStyleSheet("color: #00ffff; font-size: 16px;")
-        loc_pin.setAlignment(Qt.AlignCenter)
-        loc_panel.addWidget(loc_pin)
+        self.loc_text = QLabel("Detecting...")
+        self.loc_text.setStyleSheet("color: #e6f0ff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.loc_text.setAlignment(Qt.AlignCenter)
+        loc_panel.addWidget(self.loc_text)
         right_layout.addWidget(loc_panel)
+
+        weather_panel = HoloPanel("WEATHER")
+        weather_inner = QHBoxLayout()
+        weather_icon = QLabel("☀")
+        weather_icon.setStyleSheet("font-size: 32px; color: #f1c40f;")
+        weather_inner.addWidget(weather_icon)
+        weather_inner.addStretch()
+        weather_temp = QLabel("72°F")
+        weather_temp.setStyleSheet("color: #00ffff; font-size: 14px; font-weight: bold; font-family: 'Consolas', monospace;")
+        weather_inner.addWidget(weather_temp)
+        weather_panel.addWidget(QLabel())
+        weather_panel.layout().addLayout(weather_inner)
+        right_layout.addWidget(weather_panel)
 
         mission_panel = HoloPanel("MISSION")
         mission_title = QLabel("DAILY OBJECTIVES")
