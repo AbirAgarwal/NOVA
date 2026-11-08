@@ -5,7 +5,7 @@ import psutil
 from datetime import datetime
 from nova_voice import speak
 from listen import listen
-from nova_brain import get_response, get_stream_response
+from nova_brain import get_response, get_stream_response, set_ai_model
 from memory_manager import get_stats, show_notification
 import pystray
 from PIL import Image
@@ -17,8 +17,8 @@ import gui_controller
 # THEME (Jarvis / Iron Man)
 # ======================
 
-BG_COLOR = "#0a0f1f"
-PANEL_COLOR = "#121826"
+BG_COLOR = "#050a14"
+PANEL_COLOR = "#0c1426"
 ACCENT_COLOR = "#00ffff"      # Cyan neon
 ACCENT_DIM = "#0088aa"
 TEXT_COLOR = "#e8edf5"
@@ -28,9 +28,10 @@ THINKING_COLOR = "#f1c40f"
 SPEAKING_COLOR = "#9b59b6"
 OFFLINE_COLOR = "#e74c3c"
 ONLINE_COLOR = "#00ff9d"
+INPUT_BG = "#0a1426"
 
-FONT_TITLE = ("Segoe UI", 24, "bold")
-FONT_STATUS = ("Segoe UI", 11, "bold")
+FONT_TITLE = ("Segoe UI", 22, "bold")
+FONT_STATUS = ("Consolas", 11, "bold")
 FONT_CHAT = ("Consolas", 12)
 FONT_BUTTON = ("Segoe UI", 10, "bold")
 
@@ -41,7 +42,7 @@ FONT_BUTTON = ("Segoe UI", 10, "bold")
 
 root = tk.Tk()
 root.iconbitmap("nova_icon.ico")
-root.title("NOVA — JARVIS Interface")
+root.title("NOVA — Personal AI Operating System")
 root.geometry("1300x850")
 root.configure(bg=BG_COLOR)
 root.minsize(1100, 700)
@@ -49,7 +50,7 @@ root.minsize(1100, 700)
 gui_controller.GUI_ROOT = root
 
 nova_running = False
-current_ai_model = "qwen3:4b"
+current_ai_model = "qwen3:1.8b"  # Faster default model
 
 
 # ======================
@@ -70,7 +71,7 @@ title_label.pack(side="left")
 
 version_label = tk.Label(
     title_frame,
-    text="v1.5 — JARVIS Edition",
+    text="v1.5 — Unified Edition",
     font=("Segoe UI", 10),
     fg=TEXT_DIM,
     bg=BG_COLOR
@@ -104,6 +105,7 @@ ai_model_combo.pack(side="left")
 def on_model_change(event=None):
     global current_ai_model
     current_ai_model = ai_model_var.get()
+    set_ai_model(current_ai_model)
 
 
 ai_model_combo.bind("<<ComboboxSelected>>", on_model_change)
@@ -124,7 +126,7 @@ status_label.pack(pady=5)
 
 
 # ======================
-# CORE (Animated)
+# CORE (Animated AI Core)
 # ======================
 
 core_frame = tk.Frame(root, bg=BG_COLOR)
@@ -132,7 +134,7 @@ core_frame.pack(pady=10)
 
 core_label = tk.Label(
     core_frame,
-    text="⬤",
+    text="◉",
     font=("Segoe UI", 72),
     fg=ACCENT_COLOR,
     bg=BG_COLOR
@@ -171,9 +173,9 @@ def make_dash_label(text, fg, default="--"):
     lbl.pack(side="left", padx=25, pady=12)
     return lbl
 
-cpu_label = make_dash_label("CPU", "#00ff9d")
-ram_label = make_dash_label("RAM", "#00ffff")
-battery_label = make_dash_label("BAT", "#f1c40f")
+cpu_label = make_dash_label("CPU", SUCCESS_COLOR)
+ram_label = make_dash_label("RAM", ACCENT_COLOR)
+battery_label = make_dash_label("BAT", THINKING_COLOR)
 time_label = make_dash_label("TIME", ACCENT_COLOR)
 
 
@@ -217,7 +219,7 @@ terminal_label.pack(pady=(15, 0))
 
 chat_box = scrolledtext.ScrolledText(
     root,
-    bg="#0c1426",
+    bg="#080e1a",
     fg=TEXT_COLOR,
     font=FONT_CHAT,
     wrap="word",
@@ -233,6 +235,7 @@ chat_box.pack(fill="both", expand=True, padx=30, pady=(5, 10))
 chat_box.tag_config("nova", foreground=ACCENT_COLOR, font=(FONT_CHAT[0], FONT_CHAT[1], "bold"))
 chat_box.tag_config("user", foreground=SUCCESS_COLOR)
 chat_box.tag_config("system", foreground=TEXT_DIM)
+chat_box.tag_config("streaming", foreground=ACCENT_COLOR)
 chat_box.config(state="disabled")
 
 
@@ -245,7 +248,7 @@ input_frame.pack(fill="x", padx=30, pady=(0, 15))
 
 user_input = tk.Entry(
     input_frame,
-    bg=PANEL_COLOR,
+    bg=INPUT_BG,
     fg=TEXT_COLOR,
     insertbackground=ACCENT_COLOR,
     font=FONT_CHAT,
@@ -276,15 +279,6 @@ def style_button(btn, bg_color, hover_color):
     btn.bind("<Leave>", on_leave)
 
 
-def send_message():
-    text = user_input.get().strip()
-    if not text:
-        return
-    user_input.delete(0, tk.END)
-    add_message("You", text, "user")
-    process_input(text)
-
-
 send_button = tk.Button(input_frame, text="SEND", command=send_message)
 send_button.pack(side="right")
 style_button(send_button, ACCENT_COLOR, "#33e0ff")
@@ -313,13 +307,32 @@ def add_message(sender, message, tag="nova"):
         pass
 
 
+def streaming_add(text):
+    """Append streaming text to the last NOVA message."""
+    chat_box.config(state="normal")
+    chat_box.insert(tk.END, text, "streaming")
+    chat_box.config(state="disabled")
+    chat_box.see(tk.END)
+
+
+def send_message():
+    text = user_input.get().strip()
+    if not text:
+        return
+    user_input.delete(0, tk.END)
+    add_message("You", text, "user")
+    process_input(text)
+
+
 def process_input(text):
     set_status("thinking")
     response = ""
     try:
         for chunk in get_stream_response(text):
             response += chunk
+            streaming_add(chunk)
     except Exception as exc:
+        streaming_add(f"\n[Error: {exc}]")
         response = f"Error: {exc}"
 
     if response == "EXIT_NOVA":
@@ -332,7 +345,6 @@ def process_input(text):
         root.after(0, quit_app)
         return
 
-    add_message("NOVA", response, "nova")
     set_status("speaking")
     try:
         speak(response)
@@ -361,7 +373,9 @@ def nova_loop():
         try:
             for chunk in get_stream_response(text):
                 response += chunk
+                root.after(0, lambda c=chunk: streaming_add(c))
         except Exception as exc:
+            root.after(0, lambda e=exc: streaming_add(f"\n[Error: {e}]"))
             response = f"Error: {exc}"
         if response == "EXIT_NOVA":
             root.after(0, lambda: add_message("NOVA", "Shutting down.", "system"))
@@ -372,7 +386,6 @@ def nova_loop():
                 pass
             root.after(0, quit_app)
             break
-        root.after(0, lambda r=response: add_message("NOVA", r, "nova"))
         set_status("speaking")
         try:
             speak(response)
