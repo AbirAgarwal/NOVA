@@ -27,7 +27,7 @@ from PySide6.QtGui import (
     QConicalGradient, QPainterPath
 )
 
-from nova_voice import speak
+from nova_voice import speak, get_available_voices
 from listen import listen
 from nova_brain import get_response, get_stream_response, set_ai_model, AI_MODEL, check_ollama_status, install_model_prompt
 from memory_manager import get_stats, show_notification
@@ -40,20 +40,23 @@ import gui_controller
 
 BG_DARK = QColor(5, 10, 20)
 PANEL = QColor(15, 25, 40, 220)
-PANEL_LIGHT = QColor(25, 35, 55, 180)
 ACCENT = QColor(0, 255, 255)      # Cyan neon
 ACCENT_DIM = QColor(0, 150, 200)
 TEXT = QColor(230, 240, 255)
 TEXT_DIM = QColor(130, 150, 180)
-GLOW = QColor(0, 255, 255, 60)
 SUCCESS = QColor(0, 255, 157)
 THINKING = QColor(241, 196, 15)
 SPEAKING = QColor(155, 89, 182)
 OFFLINE = QColor(231, 76, 60)
 ONLINE = QColor(0, 255, 157)
+EMOTION_HAPPY = QColor(0, 255, 255)
+EMOTION_SAD = QColor(255, 107, 107)
+EMOTION_EXCITED = QColor(255, 215, 0)
+EMOTION_SHY = QColor(255, 105, 180)
+EMOTION_LOVING = QColor(255, 20, 147)
 
-# Settings file
 SETTINGS_FILE = Path("nova_settings.json")
+
 
 # ======================
 # BACKEND WORKER
@@ -79,12 +82,7 @@ class NovaWorker(QThread):
             self.error.emit(str(exc))
 
 
-# ======================
-# OLLAMA CHECK WORKER
-# ======================
-
 class OllamaCheckWorker(QThread):
-    """Check if Ollama is running and model is available."""
     status_changed = Signal(bool, str)
 
     def __init__(self):
@@ -112,7 +110,6 @@ class OllamaCheckWorker(QThread):
 # ======================
 
 class LocationWeatherWorker(QThread):
-    """Fetch real location and weather data from free APIs."""
     location_updated = Signal(str, str)
     weather_updated = Signal(str, str)
     error_occurred = Signal(str)
@@ -144,7 +141,7 @@ class LocationWeatherWorker(QThread):
                         temp = current.get("temperature", "?")
                         condition_code = current.get("weathercode", 0)
                         condition = self._weather_code_to_text(condition_code)
-                        self.weather_updated.emit(f"{temp}°C", condition)
+                        self.weather_updated.emit(f"{temp}\u00b0C", condition)
             else:
                 self.error_occurred.emit("Location API failed")
         except Exception as exc:
@@ -167,17 +164,12 @@ class LocationWeatherWorker(QThread):
         }
         return codes.get(code, "Unknown")
 
-    def stop(self):
-        pass
-
 
 # ======================
 # ARC REACTOR CORE (Center)
 # ======================
 
 class ArcReactorCore(QWidget):
-    """Jarvis-style arc reactor with smooth animations."""
-
     def __init__(self):
         super().__init__()
         self.setFixedSize(340, 340)
@@ -209,10 +201,14 @@ class ArcReactorCore(QWidget):
             "thinking": THINKING,
             "speaking": SPEAKING,
             "offline": OFFLINE,
+            "happy": EMOTION_HAPPY,
+            "sad": EMOTION_SAD,
+            "excited": EMOTION_EXCITED,
+            "shy": EMOTION_SHY,
+            "loving": EMOTION_LOVING,
         }
         color = mode_colors.get(self._mode, ACCENT)
 
-        # Outer rings - multiple rotating rings
         ring_configs = [
             (140, 0, 2),
             (115, 15, 1.5),
@@ -235,7 +231,6 @@ class ArcReactorCore(QWidget):
                 p2 = points[(i + 1) % len(points)]
                 painter.drawLine(p1[0], p1[1], p2[0], p2[1])
 
-        # Roaming particles
         painter.setPen(Qt.NoPen)
         for i in range(24):
             p_ang = self._angle + i * 15
@@ -247,7 +242,6 @@ class ArcReactorCore(QWidget):
             painter.setBrush(QBrush(p_color))
             painter.drawEllipse(p_x - 2, p_y - 2, 4, 4)
 
-        # Inner core - bright pulsing sun
         inner_r = int(42 + 14 * abs(math.sin(self._pulse * 2)))
         for i in range(8):
             glow_r = inner_r + i * 10
@@ -266,7 +260,6 @@ class ArcReactorCore(QWidget):
         painter.setPen(QPen(color, 2))
         painter.drawEllipse(cx - inner_r, cy - inner_r, inner_r * 2, inner_r * 2)
 
-        # Center spark
         painter.setBrush(QBrush(QColor(255, 255, 255, 255)))
         painter.setPen(Qt.NoPen)
         painter.drawEllipse(cx - 4, cy - 4, 8, 8)
@@ -277,8 +270,6 @@ class ArcReactorCore(QWidget):
 # ======================
 
 class HoloPanel(QFrame):
-    """Glassmorphism panel with neon border."""
-
     def __init__(self, title: str = "", parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -486,7 +477,7 @@ class TypingIndicator(QWidget):
         self.hide()
 
     def _animate(self):
-        states = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂", "▁"]
+        states = ["\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588", "\u2587", "\u2586", "\u2585", "\u2584", "\u2583", "\u2582", "\u2581"]
         self.label.setText(f"NOVA is processing {states[self._state % len(states)]}")
         self._state += 1
 
@@ -501,7 +492,7 @@ class JarvisWindow(QMainWindow):
 
         gui_controller.GUI_ROOT = self
 
-        self.setWindowTitle("NOVA — Personal AI Operating Companion")
+        self.setWindowTitle("NOVA \u2014 Personal AI Operating Companion")
         self.resize(1400, 800)
         self.setMinimumSize(1200, 700)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
@@ -509,6 +500,8 @@ class JarvisWindow(QMainWindow):
 
         self.nova_running = False
         self.current_ai_model = "qwen3:1.8b"
+        self.current_voice = None
+        self.emotion = "happy"
         self._worker = None
         self._current_nova_bubble = None
         self._current_nova_text = ""
@@ -561,7 +554,7 @@ class JarvisWindow(QMainWindow):
 
         title_layout.addWidget(time_date)
 
-        self.btn_close = QPushButton("✕")
+        self.btn_close = QPushButton("\u2715")
         self.btn_close.setFixedSize(34, 34)
         self.btn_close.setStyleSheet("""
             QPushButton {
@@ -595,7 +588,7 @@ class JarvisWindow(QMainWindow):
 
         voice_panel = HoloPanel("VOICE COMMAND")
         voice_inner = QHBoxLayout()
-        mic_lbl = QLabel("🎙")
+        mic_lbl = QLabel("\ud83e\udc99")
         mic_lbl.setStyleSheet("color: #00ffff; font-size: 16px;")
         voice_inner.addWidget(mic_lbl)
         voice_inner.addStretch()
@@ -619,7 +612,7 @@ class JarvisWindow(QMainWindow):
 
         env_panel = HoloPanel("ENVIRONMENT")
         env_row = QHBoxLayout()
-        self.env_temp = QLabel("--°C")
+        self.env_temp = QLabel("--\u00b0C")
         self.env_temp.setStyleSheet("color: #00ffff; font-size: 13px; font-family: 'Consolas', monospace;")
         self.env_hum = QLabel("--%")
         self.env_hum.setStyleSheet("color: #a8b3cf; font-size: 13px; font-family: 'Consolas', monospace;")
@@ -647,20 +640,20 @@ class JarvisWindow(QMainWindow):
         comm_panel = HoloPanel("COMMUNICATIONS")
         comm_inner = QHBoxLayout()
         comm_inner.setSpacing(8)
-        photo_lbl = QLabel("👤")
+        photo_lbl = QLabel("\ud83e\udc64")
         photo_lbl.setStyleSheet("font-size: 26px;")
         comm_inner.addWidget(photo_lbl)
         comm_info = QVBoxLayout()
         comm_info.setSpacing(2)
         comm_name = QLabel("USER")
         comm_name.setStyleSheet("color: #00ffff; font-size: 10px; font-weight: bold; font-family: 'Consolas', monospace;")
-        comm_online = QLabel("● ONLINE")
+        comm_online = QLabel("\u25cf ONLINE")
         comm_online.setStyleSheet("color: #00ff9d; font-size: 9px; font-family: 'Consolas', monospace;")
         comm_info.addWidget(comm_name)
         comm_info.addWidget(comm_online)
         comm_inner.addLayout(comm_info)
         comm_inner.addStretch()
-        call_btn = QPushButton("📞")
+        call_btn = QPushButton("\ud83d\udc4e")
         call_btn.setFixedSize(30, 30)
         call_btn.setStyleSheet("""
             QPushButton {
@@ -692,10 +685,15 @@ class JarvisWindow(QMainWindow):
         self.core.setFixedSize(320, 320)
         center_layout.addWidget(self.core)
 
-        self.status_label = QLabel("● OFFLINE")
+        self.status_label = QLabel("\u25cf OFFLINE")
         self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
         self.status_label.setAlignment(Qt.AlignCenter)
         center_layout.addWidget(self.status_label)
+
+        self.emotion_label = QLabel("\u2764\ufe0f Happy")
+        self.emotion_label.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.emotion_label.setAlignment(Qt.AlignCenter)
+        center_layout.addWidget(self.emotion_label)
 
         content_layout.addWidget(center_panel, 1)
 
@@ -736,7 +734,7 @@ class JarvisWindow(QMainWindow):
         self.loc_country.setStyleSheet("color: #a8b3cf; font-size: 10px; font-family: 'Consolas', monospace;")
         self.loc_country.setAlignment(Qt.AlignCenter)
         loc_panel.addWidget(self.loc_country)
-        loc_pin = QLabel("📍")
+        loc_pin = QLabel("\ud83d\udccd")
         loc_pin.setStyleSheet("color: #00ffff; font-size: 16px;")
         loc_pin.setAlignment(Qt.AlignCenter)
         loc_panel.addWidget(loc_pin)
@@ -744,11 +742,11 @@ class JarvisWindow(QMainWindow):
 
         weather_panel = HoloPanel("WEATHER")
         weather_inner = QHBoxLayout()
-        weather_icon = QLabel("☀")
+        weather_icon = QLabel("\u2601")
         weather_icon.setStyleSheet("font-size: 32px; color: #f1c40f;")
         weather_inner.addWidget(weather_icon)
         weather_inner.addStretch()
-        self.weather_temp = QLabel("--°C")
+        self.weather_temp = QLabel("--\u00b0C")
         self.weather_temp.setStyleSheet("color: #00ffff; font-size: 14px; font-weight: bold; font-family: 'Consolas', monospace;")
         weather_inner.addWidget(self.weather_temp)
         self.weather_condition = QLabel("--")
@@ -764,9 +762,9 @@ class JarvisWindow(QMainWindow):
         mission_panel.addWidget(mission_title)
 
         mission_items = [
-            ("□", "DATA ANALYSIS", "COMPLETE TASKS BY 18:00"),
-            ("□", "SYSTEM OPTIMIZATION", "PENDING REVIEW"),
-            ("□", "SECURITY AUDIT", "IN PROGRESS"),
+            ("\u25a1", "DATA ANALYSIS", "COMPLETE TASKS BY 18:00"),
+            ("\u25a1", "SYSTEM OPTIMIZATION", "PENDING REVIEW"),
+            ("\u25a1", "SECURITY AUDIT", "IN PROGRESS"),
         ]
         for checkbox, title, status in mission_items:
             row = QHBoxLayout()
@@ -786,13 +784,37 @@ class JarvisWindow(QMainWindow):
 
         sys_panel2 = HoloPanel("SYSTEM SETTINGS")
         sys_inner = QHBoxLayout()
-        holo_body = QLabel("🫐")
+        holo_body = QLabel("\ud83e\uddeb")
         holo_body.setStyleSheet("font-size: 36px; color: rgba(0, 255, 255, 35);")
         sys_inner.addWidget(holo_body)
         sys_inner.addStretch()
         cap_lbl = QLabel("100%")
         cap_lbl.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
         sys_inner.addWidget(cap_lbl)
+
+        # Voice Selection Dropdown
+        voice_label = QLabel("Voice:")
+        voice_label.setStyleSheet("color: #a8b3cf; font-size: 11px; font-family: 'Consolas', monospace;")
+        sys_inner.addWidget(voice_label)
+
+        self.voice_combo = QComboBox()
+        self.voice_combo.setFixedWidth(150)
+        self.voice_combo.setStyleSheet("""
+            QComboBox {
+                background: rgba(255, 255, 255, 10);
+                border: 1px solid rgba(0, 255, 255, 60);
+                border-radius: 6px;
+                color: #e6f0ff;
+                font-size: 11px;
+                font-family: 'Consolas', monospace;
+                padding: 4px 10px;
+            }
+            QComboBox:hover { border: 1px solid #00ffff; }
+        """)
+        self._populate_voice_combo()
+        self.voice_combo.currentTextChanged.connect(self._on_voice_changed)
+        sys_inner.addWidget(self.voice_combo)
+
         sys_panel2.addWidget(QLabel())
         sys_panel2.layout().addLayout(sys_inner)
         right_layout.addWidget(sys_panel2)
@@ -811,11 +833,11 @@ class JarvisWindow(QMainWindow):
         nav_layout.setSpacing(45)
 
         nav_items = [
-            ("🧭", "NAVIGATOR"),
-            ("📡", "DISPATCHER"),
-            ("📷", "CAMERA"),
-            ("💬", "MESSENGER"),
-            ("⚙", "SYSTEM"),
+            ("\ud83e\udcad", "NAVIGATOR"),
+            ("\ud83d\udc40", "DISPATCHER"),
+            ("\ud83d\udcf7", "CAMERA"),
+            ("\ud83d\udcac", "MESSENGER"),
+            ("\u2699", "SYSTEM"),
         ]
         for icon, label in nav_items:
             btn = QPushButton(f"{icon}\n{label}")
@@ -849,7 +871,7 @@ class JarvisWindow(QMainWindow):
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         bottom_layout.setSpacing(18)
 
-        cam_btn = QPushButton("📷")
+        cam_btn = QPushButton("\ud83d\udcf7")
         cam_btn.setFixedSize(48, 48)
         cam_btn.setStyleSheet("""
             QPushButton {
@@ -863,7 +885,7 @@ class JarvisWindow(QMainWindow):
         """)
         bottom_layout.addWidget(cam_btn)
 
-        self.waveform_lbl = QLabel("▁▃▅▇▅▃▁")
+        self.waveform_lbl = QLabel("\u2581\u2583\u2585\u2587\u2585\u2583\u2581")
         self.waveform_lbl.setStyleSheet("color: #00ffff; font-size: 16px; font-weight: bold; font-family: 'Consolas', monospace;")
         bottom_layout.addWidget(self.waveform_lbl)
         bottom_layout.addStretch()
@@ -928,7 +950,7 @@ class JarvisWindow(QMainWindow):
         self.input_field.returnPressed.connect(self._on_send)
         input_layout.addWidget(self.input_field, 1)
 
-        self.voice_btn = QPushButton("🎙")
+        self.voice_btn = QPushButton("\ud83e\udc99")
         self.voice_btn.setFixedSize(44, 44)
         self.voice_btn.setStyleSheet("""
             QPushButton {
@@ -967,7 +989,7 @@ class JarvisWindow(QMainWindow):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(12)
 
-        self.start_btn = QPushButton("▶ START")
+        self.start_btn = QPushButton("\u25b6 START")
         self.start_btn.setFixedSize(110, 40)
         self.start_btn.setStyleSheet("""
             QPushButton {
@@ -985,7 +1007,7 @@ class JarvisWindow(QMainWindow):
         self.start_btn.clicked.connect(self._start_nova)
         btn_row.addWidget(self.start_btn)
 
-        self.stop_btn = QPushButton("■ STOP")
+        self.stop_btn = QPushButton("\u25a0 STOP")
         self.stop_btn.setFixedSize(110, 40)
         self.stop_btn.setStyleSheet("""
             QPushButton {
@@ -1003,7 +1025,7 @@ class JarvisWindow(QMainWindow):
         self.stop_btn.clicked.connect(self._stop_nova)
         btn_row.addWidget(self.stop_btn)
 
-        self.hide_chat_btn = QPushButton("✕ HIDE CHAT")
+        self.hide_chat_btn = QPushButton("\u2715 HIDE CHAT")
         self.hide_chat_btn.setFixedSize(120, 40)
         self.hide_chat_btn.setStyleSheet("""
             QPushButton {
@@ -1047,7 +1069,7 @@ class JarvisWindow(QMainWindow):
         self._start_location_weather()
 
     def _animate_wave(self):
-        states = ["▁▃▅▇▅▃▁", "▁▂▃▄▅▆▇", "▇▆▅▄▃▂▁", "▁▃▅▇▅▃▁"]
+        states = ["\u2581\u2583\u2585\u2587\u2585\u2583\u2581", "\u2581\u2582\u2583\u2584\u2585\u2586\u2587", "\u2587\u2586\u2585\u2584\u2583\u2582\u2581", "\u2581\u2583\u2585\u2587\u2585\u2583\u2581"]
         self._wave_state = (self._wave_state + 1) % len(states)
         self.waveform_lbl.setText(states[self._wave_state])
 
@@ -1069,6 +1091,56 @@ class JarvisWindow(QMainWindow):
             self.date_label.setText(now.strftime("%A %d %b %Y").upper())
         except Exception:
             pass
+
+    def _set_emotion(self, emotion: str):
+        """Change NOVA's emotional state and core color."""
+        self.emotion = emotion
+        emotion_map = {
+            "online": (ONLINE, "\u25cf ONLINE", "\u2764\ufe0f Happy"),
+            "listening": (ACCENT, "\u25cf LISTENING", "\U0001f442 Listening"),
+            "thinking": (THINKING, "\u25cf THINKING", "\U0001f914 Thinking"),
+            "speaking": (SPEAKING, "\u25cf SPEAKING", "\U0001f5e3\ufe0f Speaking"),
+            "offline": (OFFLINE, "\u25cf OFFLINE", "\U0001f634 Offline"),
+            "happy": (EMOTION_HAPPY, "\u25cf HAPPY", "\u2764\ufe0f Happy"),
+            "sad": (EMOTION_SAD, "\u25cf SAD", "\U0001f622 Sad"),
+            "excited": (EMOTION_EXCITED, "\u25cf EXCITED", "\U0001f389 Excited"),
+            "shy": (EMOTION_SHY, "\u25cf SHY", "\U0001f60a Shy"),
+            "loving": (EMOTION_LOVING, "\u25cf IN LOVE", "\U0001f60d In Love"),
+        }
+        color, status_text, emotion_text = emotion_map.get(emotion, (ACCENT, "\u25cf ONLINE", "\u2764\ufe0f Happy"))
+        self.status_label.setText(status_text)
+        self.status_label.setStyleSheet(f"color: {color.name()}; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.emotion_label.setText(emotion_text)
+        self.emotion_label.setStyleSheet(f"color: {color.name()}; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.core.set_mode(emotion)
+
+    def _populate_voice_combo(self):
+        """Populate voice combo with available system voices."""
+        self.voice_combo.clear()
+        try:
+            voices = get_available_voices()
+            for v in voices:
+                self.voice_combo.addItem(f"{v['name']} ({v['gender']})", v['id'])
+            # Select first female voice by default
+            for i in range(self.voice_combo.count()):
+                if "Female" in self.voice_combo.itemText(i):
+                    self.voice_combo.setCurrentIndex(i)
+                    self.current_voice = self.voice_combo.itemData(i)
+                    break
+            if self.current_voice is None and self.voice_combo.count() > 0:
+                self.current_voice = self.voice_combo.itemData(0)
+        except Exception as exc:
+            print(f"Voice combo error: {exc}")
+
+    def _on_voice_changed(self, text):
+        """Handle voice selection change."""
+        idx = self.voice_combo.currentIndex()
+        if idx >= 0:
+            self.current_voice = self.voice_combo.itemData(idx)
+            try:
+                speak("Voice changed.", voice_id=self.current_voice)
+            except Exception as exc:
+                print(f"Voice test error: {exc}")
 
     def _start_location_weather(self):
         self._loc_worker = LocationWeatherWorker()
@@ -1169,11 +1241,16 @@ class JarvisWindow(QMainWindow):
     def _on_ollama_status(self, online: bool, message: str):
         self.ollama_online = online
         if online:
-            self.status_label.setText("● ONLINE")
+            self.status_label.setText("\u25cf ONLINE")
             self.status_label.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+            self.core.set_mode("online")
+            self.emotion_label.setText("\u2764\ufe0f Happy")
+            self.emotion_label.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         else:
-            self.status_label.setText(f"● {message}")
+            self.status_label.setText(f"\u25cf {message}")
             self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+            self.emotion_label.setText("\U0001f622 Sad")
+            self.emotion_label.setStyleSheet("color: #e74c3c; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
 
     def _show_chat(self):
         if not self.chat_visible:
@@ -1246,8 +1323,10 @@ class JarvisWindow(QMainWindow):
     def _on_ai_finished(self, full_text: str):
         self._finish_nova_stream(full_text)
         self.core.set_mode("listening")
-        self.status_label.setText("● LISTENING")
+        self.status_label.setText("\u25cf LISTENING")
         self.status_label.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.emotion_label.setText("\u2764\ufe0f Happy")
+        self.emotion_label.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         self.send_btn.setEnabled(True)
         self.input_field.setEnabled(True)
         self.input_field.setFocus()
@@ -1256,8 +1335,10 @@ class JarvisWindow(QMainWindow):
     def _on_ai_error(self, error_msg: str):
         self.typing.stop()
         self.core.set_mode("offline")
-        self.status_label.setText("● OFFLINE")
+        self.status_label.setText("\u25cf OFFLINE")
         self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.emotion_label.setText("\U0001f622 Sad")
+        self.emotion_label.setStyleSheet("color: #e74c3c; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         if self._current_nova_bubble:
             self._current_nova_bubble.label.setText(f"Error: {error_msg}")
             self._current_nova_bubble = None
@@ -1270,8 +1351,10 @@ class JarvisWindow(QMainWindow):
         self.send_btn.setEnabled(False)
         self.input_field.setEnabled(False)
         self.core.set_mode("listening")
-        self.status_label.setText("● LISTENING")
+        self.status_label.setText("\u25cf LISTENING")
         self.status_label.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.emotion_label.setText("\U0001f442 Listening")
+        self.emotion_label.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         self._show_chat()
 
         def _voice_thread():
@@ -1289,7 +1372,7 @@ class JarvisWindow(QMainWindow):
                 self._worker.start()
             else:
                 self.core.set_mode("offline")
-                self.status_label.setText("● OFFLINE")
+                self.status_label.setText("\u25cf OFFLINE")
                 self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
                 self.send_btn.setEnabled(True)
                 self.input_field.setEnabled(True)
@@ -1304,19 +1387,23 @@ class JarvisWindow(QMainWindow):
         self._add_nova_message("System activated.")
         show_notification("NOVA", "System activated")
         try:
-            speak("Nova is now online")
+            speak("Nova is now online", voice_id=self.current_voice)
         except Exception:
             pass
         self.core.set_mode("listening")
-        self.status_label.setText("● LISTENING")
+        self.status_label.setText("\u25cf LISTENING")
         self.status_label.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.emotion_label.setText("\u2764\ufe0f Happy")
+        self.emotion_label.setStyleSheet("color: #00ffff; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         threading.Thread(target=self._nova_loop, daemon=True).start()
 
     def _stop_nova(self):
         self.nova_running = False
         self.core.set_mode("offline")
-        self.status_label.setText("● OFFLINE")
+        self.status_label.setText("\u25cf OFFLINE")
         self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
+        self.emotion_label.setText("\U0001f634 Offline")
+        self.emotion_label.setStyleSheet("color: #e74c3c; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         self._add_nova_message("System stopped.")
         show_notification("NOVA", "System stopped")
 
@@ -1330,7 +1417,7 @@ class JarvisWindow(QMainWindow):
                 continue
             self._add_user_message(text)
             self.core.set_mode("thinking")
-            self.status_label.setText("● THINKING")
+            self.status_label.setText("\u25cf THINKING")
             self.status_label.setStyleSheet("color: #f1c40f; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
             response = ""
             try:
@@ -1341,7 +1428,7 @@ class JarvisWindow(QMainWindow):
             if response == "EXIT_NOVA":
                 self._add_nova_message("Shutting down.")
                 self.core.set_mode("offline")
-                self.status_label.setText("● OFFLINE")
+                self.status_label.setText("\u25cf OFFLINE")
                 self.status_label.setStyleSheet("color: #e74c3c; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
                 try:
                     speak("Shutting down")
@@ -1351,14 +1438,14 @@ class JarvisWindow(QMainWindow):
                 break
             self._add_nova_message(response)
             self.core.set_mode("speaking")
-            self.status_label.setText("● SPEAKING")
+            self.status_label.setText("\u25cf SPEAKING")
             self.status_label.setStyleSheet("color: #9b59b6; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
             try:
                 speak(response)
             except Exception:
                 pass
             self.core.set_mode("listening")
-            self.status_label.setText("● LISTENING")
+            self.status_label.setText("\u25cf LISTENING")
             self.status_label.setStyleSheet("color: #00ffff; font-size: 13px; font-weight: bold; font-family: 'Consolas', monospace;")
 
 
