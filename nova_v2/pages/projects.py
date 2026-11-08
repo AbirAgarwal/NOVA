@@ -1,14 +1,24 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QListWidget, QListWidgetItem, QFrame, QMessageBox,
-    QInputDialog, QScrollArea
+    QInputDialog
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont
+
+# ======================
+# COLORS
+# ======================
+
+BG_DARK = "#050a14"
+PANEL = "rgba(10, 20, 38, 180)"
+ACCENT = "#00ffff"
+TEXT = "#e8edf5"
+TEXT_DIM = "#a8b3cf"
 
 
 class ProjectsPage(QWidget):
-    """Project management page — add, list, open, and track projects."""
+    """Jarvis-style project management page."""
 
     def __init__(self, backend=None):
         super().__init__()
@@ -30,61 +40,61 @@ class ProjectsPage(QWidget):
 
         # Header
         header = QHBoxLayout()
-        title = QLabel("Projects")
-        title.setStyleSheet("font-size: 30px; font-weight: bold; color: #00D4FF;")
+        title = QLabel("PROJECTS")
+        title.setStyleSheet(f"font-size: 28px; font-weight: bold; color: {ACCENT}; letter-spacing: 2px; font-family: 'Consolas', monospace;")
         header.addWidget(title)
         header.addStretch()
 
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.setFixedSize(90, 34)
-        refresh_btn.setStyleSheet(self._button_style("#00D4FF"))
+        refresh_btn = QPushButton("REFRESH")
+        refresh_btn.setFixedSize(95, 34)
+        refresh_btn.setStyleSheet(self._button_style(ACCENT))
         refresh_btn.clicked.connect(self._refresh_projects)
         header.addWidget(refresh_btn)
 
         main.addLayout(header)
 
-        # Stats / summary
         self.summary_label = QLabel("")
-        self.summary_label.setStyleSheet("color: #A8B3CF; font-size: 13px;")
+        self.summary_label.setStyleSheet(f"color: {TEXT_DIM}; font-size: 12px; font-family: 'Consolas', monospace;")
         main.addWidget(self.summary_label)
 
         # Project list
         list_frame = QFrame()
-        list_frame.setStyleSheet("""
-            QFrame {
-                background: rgba(20, 25, 40, 160);
-                border: 1px solid rgba(255, 255, 255, 15);
+        list_frame.setStyleSheet(f"""
+            QFrame {{
+                background: rgba(5, 10, 20, 160);
+                border: 1px solid rgba(255, 255, 255, 12);
                 border-radius: 16px;
-            }
+            }}
         """)
         list_layout = QVBoxLayout(list_frame)
 
         list_header = QHBoxLayout()
-        list_header.addWidget(QLabel("Your Projects"))
+        list_header.addWidget(QLabel("ACTIVE PROJECTS"))
         list_header.addStretch()
         list_layout.addLayout(list_header)
 
         self.project_list = QListWidget()
-        self.project_list.setStyleSheet("""
-            QListWidget {
+        self.project_list.setStyleSheet(f"""
+            QListWidget {{
                 background: transparent;
                 border: none;
-                color: #E8EDF5;
+                color: {TEXT};
                 font-size: 14px;
+                font-family: 'Consolas', monospace;
                 outline: none;
-            }
-            QListWidget::item {
-                background: rgba(255, 255, 255, 8);
-                border: 1px solid rgba(255, 255, 255, 12);
+            }}
+            QListWidget::item {{
+                background: rgba(255, 255, 255, 6);
+                border: 1px solid rgba(255, 255, 255, 10);
                 border-radius: 10px;
-                padding: 12px;
-                margin: 4px;
-            }
-            QListWidget::item:selected {
-                background: rgba(0, 212, 255, 40);
-                border: 1px solid #00D4FF;
-                color: #00D4FF;
-            }
+                padding: 14px;
+                margin: 5px;
+            }}
+            QListWidget::item:selected {{
+                background: rgba(0, 255, 255, 35);
+                border: 1px solid {ACCENT};
+                color: {ACCENT};
+            }}
         """)
         self.project_list.itemDoubleClicked.connect(self._on_project_double_clicked)
         list_layout.addWidget(self.project_list)
@@ -95,37 +105,36 @@ class ProjectsPage(QWidget):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(12)
 
-        self.add_btn = QPushButton("➕ Add Project")
-        self.add_btn.setFixedHeight(40)
-        self.add_btn.setStyleSheet(self._button_style("#00D4FF"))
+        self.add_btn = QPushButton("➕ ADD PROJECT")
+        self.add_btn.setFixedHeight(42)
+        self.add_btn.setStyleSheet(self._button_style(ACCENT))
         self.add_btn.clicked.connect(self._add_project)
         btn_layout.addWidget(self.add_btn)
 
-        self.open_btn = QPushButton("📂 Open Selected")
-        self.open_btn.setFixedHeight(40)
+        self.open_btn = QPushButton("📂 OPEN SELECTED")
+        self.open_btn.setFixedHeight(42)
         self.open_btn.setStyleSheet(self._button_style("#6366f1"))
         self.open_btn.clicked.connect(self._open_selected)
         btn_layout.addWidget(self.open_btn)
 
-        self.delete_btn = QPushButton("🗑 Delete Selected")
-        self.delete_btn.setFixedHeight(40)
+        self.delete_btn = QPushButton("🗑 DELETE")
+        self.delete_btn.setFixedHeight(42)
         self.delete_btn.setStyleSheet(self._button_style("#ef4444"))
         self.delete_btn.clicked.connect(self._delete_selected)
         btn_layout.addWidget(self.delete_btn)
 
         btn_layout.addStretch()
 
-        self.notes_btn = QPushButton("📝 Add Note to Project")
-        self.notes_btn.setFixedHeight(40)
+        self.notes_btn = QPushButton("📝 ADD NOTE")
+        self.notes_btn.setFixedHeight(42)
         self.notes_btn.setStyleSheet(self._button_style("#8b5cf6"))
         self.notes_btn.clicked.connect(self._add_project_note)
         btn_layout.addWidget(self.notes_btn)
 
         main.addLayout(btn_layout)
 
-        # Status label
         self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #00D4FF; font-size: 12px; font-weight: bold;")
+        self.status_label.setStyleSheet(f"color: {ACCENT}; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
         main.addWidget(self.status_label)
 
     @staticmethod
@@ -136,8 +145,9 @@ class ProjectsPage(QWidget):
                 border: none;
                 border-radius: 10px;
                 color: #000000;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: bold;
+                font-family: 'Consolas', monospace;
             }}
             QPushButton:hover {{
                 opacity: 0.9;
@@ -158,7 +168,7 @@ class ProjectsPage(QWidget):
             for project in projects:
                 item = QListWidgetItem(project)
                 self.project_list.addItem(item)
-            self.summary_label.setText(f"{len(projects)} project(s) saved")
+            self.summary_label.setText(f"{len(projects)} project(s) in memory")
         else:
             self.summary_label.setText("No projects stored yet.")
         self.status_label.setText("")
@@ -194,7 +204,6 @@ class ProjectsPage(QWidget):
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            # Remove from memory by clearing and re-adding remaining
             memory = self.backend.load_memory()
             if project_name in memory.get("projects", []):
                 memory["projects"].remove(project_name)

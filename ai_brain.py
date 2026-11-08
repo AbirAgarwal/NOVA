@@ -15,9 +15,17 @@ Rules:
 - Keep replies under 3 sentences unless detailed explanations are requested.
 """
 
+# Faster default model — change via set_ai_model() or in the GUI
+AI_MODEL = "qwen3:1.8b"
+
 conversation = [
     {"role": "system", "content": SYSTEM_PROMPT}
 ]
+
+
+def set_ai_model(model_name):
+    global AI_MODEL
+    AI_MODEL = model_name
 
 
 def get_ai_response(user_text):
@@ -35,10 +43,9 @@ def get_ai_response(user_text):
             "content": user_text
         }
     )
-    
 
     response = chat(
-        model="qwen3:4b",
+        model=AI_MODEL,
         messages=conversation
     )
 
@@ -54,6 +61,7 @@ def get_ai_response(user_text):
     if len(conversation) > 60:
         conversation[:] = [conversation[0]] + conversation[-59:]
     return reply
+
 
 def stream_ai_response(user_text):
 
@@ -72,7 +80,7 @@ def stream_ai_response(user_text):
     )
 
     stream = chat(
-        model="qwen3:4b",
+        model=AI_MODEL,
         messages=conversation,
         stream=True
     )

@@ -1,14 +1,28 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QScrollArea, QFrame, QSizePolicy, QSpacerItem,
-    QTextEdit, QGraphicsDropShadowEffect
+    QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer
-from PySide6.QtGui import QFont, QColor, QPalette
+from PySide6.QtGui import QFont, QColor
+
+
+# ======================
+# COLORS
+# ======================
+
+BG_DARK = "#050a14"
+PANEL = "rgba(10, 20, 38, 180)"
+ACCENT = "#00ffff"
+ACCENT_DIM = "#0088aa"
+TEXT = "#e8edf5"
+TEXT_DIM = "#a8b3cf"
+USER_COLOR = "#00ff9d"
+NOVA_COLOR = ACCENT
 
 
 class MessageBubble(QFrame):
-    """A single chat message bubble."""
+    """A single chat message bubble — Jarvis style."""
 
     def __init__(self, text: str, is_user: bool = False):
         super().__init__()
@@ -17,41 +31,43 @@ class MessageBubble(QFrame):
 
     def _build(self, text: str):
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setContentsMargins(16, 10, 16, 10)
         layout.setSpacing(8)
 
         self.label = QLabel(text)
         self.label.setWordWrap(True)
-        self.label.setMaximumWidth(700)
+        self.label.setMaximumWidth(720)
         self.label.setFont(QFont("Segoe UI", 12))
         self.label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         if self.is_user:
-            # User bubble — blue, right-aligned
-            self.setStyleSheet("""
-                QFrame {
+            # User bubble — green, right-aligned
+            self.setStyleSheet(f"""
+                QFrame {{
                     background: qlineargradient(
                         x1:0, y1:0, x2:1, y2:0,
-                        stop:0 #00D4FF, stop:1 #0099CC
+                        stop:0 rgba(0, 255, 157, 60),
+                        stop:1 rgba(0, 200, 120, 60)
                     );
-                    border-radius: 16px;
+                    border: 1px solid rgba(0, 255, 157, 100);
+                    border-radius: 18px;
                     color: #000000;
-                }
+                }}
             """)
-            self.label.setStyleSheet("color: #000000; font-size: 13px; font-weight: 500;")
+            self.label.setStyleSheet("color: #000000; font-size: 13px; font-weight: 600;")
             layout.addStretch()
             layout.addWidget(self.label, 0)
         else:
-            # NOVA bubble — glass, left-aligned
-            self.setStyleSheet("""
-                QFrame {
-                    background: rgba(40, 48, 72, 200);
-                    border: 1px solid rgba(255, 255, 255, 20);
-                    border-radius: 16px;
-                    color: #E8EDF5;
-                }
+            # NOVA bubble — glass cyan, left-aligned
+            self.setStyleSheet(f"""
+                QFrame {{
+                    background: rgba(10, 20, 38, 200);
+                    border: 1px solid rgba(0, 255, 255, 40);
+                    border-radius: 18px;
+                    color: {TEXT};
+                }}
             """)
-            self.label.setStyleSheet("color: #E8EDF5; font-size: 13px;")
+            self.label.setStyleSheet(f"color: {TEXT}; font-size: 13px;")
             layout.addWidget(self.label, 0)
             layout.addStretch()
 
@@ -59,17 +75,17 @@ class MessageBubble(QFrame):
 
 
 class TypingIndicator(QFrame):
-    """Animated 'NOVA is typing...' indicator."""
+    """Animated 'NOVA is thinking...' indicator."""
 
     def __init__(self):
         super().__init__()
         self.setFixedHeight(40)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 8, 14, 8)
+        layout.setContentsMargins(16, 8, 16, 8)
 
-        self.dots = QLabel("●●●")
-        self.dots.setStyleSheet("color: #00D4FF; font-size: 16px; font-weight: bold;")
-        layout.addWidget(self.dots)
+        self.label = QLabel("NOVA is processing...")
+        self.label.setStyleSheet(f"color: {ACCENT}; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;")
+        layout.addWidget(self.label)
         layout.addStretch()
 
         self._timer = QTimer(self)
@@ -77,7 +93,7 @@ class TypingIndicator(QFrame):
         self._state = 0
 
     def start(self):
-        self._timer.start(400)
+        self._timer.start(350)
         self.show()
 
     def stop(self):
@@ -85,13 +101,13 @@ class TypingIndicator(QFrame):
         self.hide()
 
     def _animate(self):
-        states = ["●●●", "●●○", "●○○", "○○●"]
-        self.dots.setText(states[self._state % len(states)])
+        states = ["▋", "▋▊", "▋▊▌", "▋▊▌▍", "▋▊▌▍▎", "▋▊▌▍▎▏", "▋▊▌▍▎", "▋▊▌▍", "▋▊▌", "▋▊", "▋"]
+        self.label.setText(f"NOVA is processing {states[self._state % len(states)]}")
         self._state += 1
 
 
 class AIWorker(QThread):
-    """Background thread for streaming AI responses so the UI stays responsive."""
+    """Background thread for streaming AI responses."""
 
     chunk_received = Signal(str)
     finished = Signal(str)
@@ -114,14 +130,15 @@ class AIWorker(QThread):
 
 
 class AssistantPage(QWidget):
-    """AI chat interface — the core of NOVA v2."""
+    """Jarvis-style AI chat interface with streaming and voice."""
 
-    def __init__(self, backend=None):
+    def __init__(self, backend=None, dashboard=None):
         super().__init__()
         self.setObjectName("assistant")
 
         from nova_backend import NovaBackend
         self.backend = backend or NovaBackend()
+        self.dashboard = dashboard
 
         self._worker = None
         self._current_nova_bubble = None
@@ -139,46 +156,49 @@ class AssistantPage(QWidget):
 
         # Header
         header = QHBoxLayout()
+
         title = QLabel("NOVA Assistant")
-        title.setStyleSheet("font-size: 30px; font-weight: bold; color: #00D4FF;")
+        title.setStyleSheet(f"font-size: 28px; font-weight: bold; color: {ACCENT}; letter-spacing: 1px;")
         header.addWidget(title)
         header.addStretch()
 
-        voice_btn = QPushButton("🎙 Voice")
+        voice_btn = QPushButton("🎙 VOICE")
         voice_btn.setFixedSize(100, 36)
-        voice_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(0, 212, 255, 30);
-                border: 1px solid #00D4FF;
+        voice_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(0, 255, 255, 25);
+                border: 1px solid {ACCENT};
                 border-radius: 18px;
-                color: #00D4FF;
-                font-size: 12px;
+                color: {ACCENT};
+                font-size: 11px;
                 font-weight: bold;
-            }
-            QPushButton:hover {
-                background: rgba(0, 212, 255, 60);
-            }
-            QPushButton:pressed {
-                background: rgba(0, 212, 255, 90);
-            }
+                font-family: 'Consolas', monospace;
+            }}
+            QPushButton:hover {{
+                background: rgba(0, 255, 255, 50);
+            }}
+            QPushButton:pressed {{
+                background: rgba(0, 255, 255, 80);
+            }}
         """)
         voice_btn.clicked.connect(self._on_voice)
         header.addWidget(voice_btn)
 
-        clear_btn = QPushButton("Clear")
+        clear_btn = QPushButton("CLEAR")
         clear_btn.setFixedSize(80, 36)
-        clear_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 255, 255, 15);
-                border: 1px solid rgba(255, 255, 255, 30);
+        clear_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255, 255, 255, 12);
+                border: 1px solid rgba(255, 255, 255, 25);
                 border-radius: 18px;
-                color: #E8EDF5;
-                font-size: 12px;
+                color: {TEXT};
+                font-size: 11px;
                 font-weight: bold;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 30);
-            }
+                font-family: 'Consolas', monospace;
+            }}
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 25);
+            }}
         """)
         clear_btn.clicked.connect(self._clear_chat)
         header.addWidget(clear_btn)
@@ -195,7 +215,7 @@ class AssistantPage(QWidget):
         self.chat_container.setStyleSheet("background: transparent;")
         self.chat_layout = QVBoxLayout(self.chat_container)
         self.chat_layout.setContentsMargins(0, 0, 0, 0)
-        self.chat_layout.setSpacing(10)
+        self.chat_layout.setSpacing(12)
         self.chat_layout.addStretch()
 
         scroll.setWidget(self.chat_container)
@@ -208,59 +228,61 @@ class AssistantPage(QWidget):
 
         # Input area
         input_frame = QFrame()
-        input_frame.setStyleSheet("""
-            QFrame {
-                background: rgba(20, 25, 40, 180);
-                border: 1px solid rgba(255, 255, 255, 25);
-                border-radius: 25px;
-            }
+        input_frame.setStyleSheet(f"""
+            QFrame {{
+                background: rgba(5, 10, 20, 190);
+                border: 1px solid rgba(255, 255, 255, 20);
+                border-radius: 28px;
+            }}
         """)
-        input_frame.setFixedHeight(60)
+        input_frame.setFixedHeight(64)
 
         input_layout = QHBoxLayout(input_frame)
-        input_layout.setContentsMargins(20, 0, 15, 0)
-        input_layout.setSpacing(10)
+        input_layout.setContentsMargins(22, 0, 16, 0)
+        input_layout.setSpacing(12)
 
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Type a command or ask NOVA...")
-        self.input_field.setStyleSheet("""
-            QLineEdit {
+        self.input_field.setPlaceholderText("Type a command or speak to NOVA...")
+        self.input_field.setStyleSheet(f"""
+            QLineEdit {{
                 background: transparent;
                 border: none;
-                color: #E8EDF5;
+                color: {TEXT};
                 font-size: 14px;
-            }
+                font-family: 'Consolas', monospace;
+            }}
         """)
         self.input_field.returnPressed.connect(self._on_send)
         input_layout.addWidget(self.input_field, 1)
 
-        self.send_btn = QPushButton("Send")
-        self.send_btn.setFixedSize(90, 40)
-        self.send_btn.setStyleSheet("""
-            QPushButton {
+        self.send_btn = QPushButton("SEND")
+        self.send_btn.setFixedSize(86, 44)
+        self.send_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(
                     x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #00D4FF, stop:1 #0099CC
+                    stop:0 {ACCENT}, stop:1 #0099cc
                 );
                 border: none;
-                border-radius: 20px;
+                border-radius: 22px;
                 color: #000000;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: bold;
-            }
-            QPushButton:hover {
+                font-family: 'Consolas', monospace;
+            }}
+            QPushButton:hover {{
                 background: qlineargradient(
                     x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #33E0FF, stop:1 #0099CC
+                    stop:0 #33e0ff, stop:1 #0099cc
                 );
-            }
-            QPushButton:pressed {
-                background: #0077AA;
-            }
-            QPushButton:disabled {
-                background: #555555;
-                color: #AAAAAA;
-            }
+            }}
+            QPushButton:pressed {{
+                background: #0077aa;
+            }}
+            QPushButton:disabled {{
+                background: #444444;
+                color: #888888;
+            }}
         """)
         self.send_btn.clicked.connect(self._on_send)
         input_layout.addWidget(self.send_btn)
@@ -268,14 +290,13 @@ class AssistantPage(QWidget):
         main.addWidget(input_frame)
 
         # Welcome message
-        self._add_nova_message("Hello! I'm NOVA, your personal AI operating companion. How can I help you today?")
+        self._add_nova_message("System online. I am NOVA — your personal AI operating companion. How may I assist you today?")
 
     # ------------------------------------------------------------------
     # Chat helpers
     # ------------------------------------------------------------------
     def _add_user_message(self, text: str):
         bubble = MessageBubble(text, is_user=True)
-        # Insert before the stretch
         self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble)
         QTimer.singleShot(50, self._scroll_to_bottom)
 
@@ -286,7 +307,6 @@ class AssistantPage(QWidget):
         return bubble
 
     def _start_nova_stream(self):
-        """Begin a streaming NOVA message bubble."""
         self._current_nova_bubble = MessageBubble("", is_user=False)
         self.chat_layout.insertWidget(self.chat_layout.count() - 1, self._current_nova_bubble)
         self._current_nova_text = ""
@@ -296,7 +316,7 @@ class AssistantPage(QWidget):
     def _append_nova_stream(self, chunk: str):
         self._current_nova_text += chunk
         self._current_nova_bubble.label.setText(self._current_nova_text)
-        QTimer.singleShot(30, self._scroll_to_bottom)
+        QTimer.singleShot(20, self._scroll_to_bottom)
 
     def _finish_nova_stream(self, full_text: str):
         self._current_nova_text = full_text
@@ -319,6 +339,10 @@ class AssistantPage(QWidget):
         if not text:
             return
 
+        if self.dashboard:
+            self.dashboard.set_mode("thinking")
+            self.dashboard.log(f"User: {text}")
+
         self._add_user_message(text)
         self.input_field.clear()
         self.send_btn.setEnabled(False)
@@ -334,6 +358,9 @@ class AssistantPage(QWidget):
 
     def _on_ai_finished(self, full_text: str):
         self._finish_nova_stream(full_text)
+        if self.dashboard:
+            self.dashboard.set_mode("listening")
+            self.dashboard.log(f"NOVA: {full_text}")
         self.send_btn.setEnabled(True)
         self.input_field.setEnabled(True)
         self.input_field.setFocus()
@@ -341,9 +368,12 @@ class AssistantPage(QWidget):
 
     def _on_ai_error(self, error_msg: str):
         self.typing.stop()
+        if self.dashboard:
+            self.dashboard.set_mode("offline")
+            self.dashboard.log(f"Error: {error_msg}")
         if self._current_nova_bubble:
             self._current_nova_bubble.label.setText(
-                f"Sorry, I ran into an error: {error_msg}"
+                f"Error: {error_msg}"
             )
             self._current_nova_bubble = None
         self.send_btn.setEnabled(True)
@@ -375,7 +405,6 @@ class AssistantPage(QWidget):
             self.input_field.setEnabled(True)
 
     def _clear_chat(self):
-        # Remove all bubbles except the stretch
         while self.chat_layout.count() > 1:
             item = self.chat_layout.takeAt(0)
             widget = item.widget()

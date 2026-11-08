@@ -17,6 +17,11 @@ class NovaBackend:
         # Lazy imports so the GUI can start even if Ollama isn't running yet
         self._get_response = None
         self._get_stream_response = None
+        self._set_ai_model = None
+
+    def set_ai_model(self, model_name: str):
+        from ai_brain import set_ai_model
+        set_ai_model(model_name)
 
     # ------------------------------------------------------------------
     # AI / chat
