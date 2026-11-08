@@ -279,6 +279,15 @@ def style_button(btn, bg_color, hover_color):
     btn.bind("<Leave>", on_leave)
 
 
+def send_message():
+    text = user_input.get().strip()
+    if not text:
+        return
+    user_input.delete(0, tk.END)
+    add_message("You", text, "user")
+    process_input(text)
+
+
 send_button = tk.Button(input_frame, text="SEND", command=send_message)
 send_button.pack(side="right")
 style_button(send_button, ACCENT_COLOR, "#33e0ff")
@@ -313,15 +322,6 @@ def streaming_add(text):
     chat_box.insert(tk.END, text, "streaming")
     chat_box.config(state="disabled")
     chat_box.see(tk.END)
-
-
-def send_message():
-    text = user_input.get().strip()
-    if not text:
-        return
-    user_input.delete(0, tk.END)
-    add_message("You", text, "user")
-    process_input(text)
 
 
 def process_input(text):
