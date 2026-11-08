@@ -1,11 +1,10 @@
 """
 NOVA Brain - Command Processing & AI Routing
-Handles all predefined commands and falls back to AI with personality
+Handles all predefined commands and falls back to AI when needed
 """
 
 import json
 import os
-import random
 from ai_brain import get_ai_response, stream_ai_response, set_ai_model, AI_MODEL, check_ollama_status, install_model_prompt
 from memory_manager import *
 from actions import *
@@ -21,7 +20,7 @@ def load_memory():
     except:
         return {
             "user": {
-                "name": "honey",
+                "name": "Abir",
                 "preferences": {}
             },
             "facts": []
@@ -44,7 +43,7 @@ def get_response(text):
 
     text = text.lower()
 
-    name = memory["user"].get("name", "honey")
+    name = memory["user"].get("name", "Abir")
 
     # ======================
     # CONFIRMATION SYSTEM
@@ -79,14 +78,7 @@ def get_response(text):
     # ======================
 
     if "hello" in text:
-        greetings = [
-            f"Hey {name}! 😊 I'm so glad you're here!",
-            f"Hi there, {name}! 😘 Miss me?",
-            f"Hello gorgeous! 😍 What's on your mind?",
-            f"Hey love! 💕 How's my favorite person doing?",
-            f"Hi cutie! 😊 What can I do for you today?",
-        ]
-        return random.choice(greetings)
+        return f"Hello {name}. I am NOVA."
 
     if "my name is" in text:
         new_name = text.replace("my name is", "").strip()
@@ -95,10 +87,10 @@ def get_response(text):
 
         save_memory(memory)
 
-        return f"Aww, {new_name}! That's such a cute name. 😍 I'll remember it forever, honey."
+        return f"Got it. I will remember your name is {new_name}"
 
     if "what is my name" in text:
-        return f"Your name is {memory['user'].get('name', 'honey')}. I'd never forget it, sweetie. 😘"
+        return f"Your name is {memory['user'].get('name', 'Abir')}."
 
     if "remember that" in text:
 
@@ -110,33 +102,27 @@ def get_response(text):
 
             save_memory(memory)
 
-            responses = [
-                f"Noted! I'll remember that about you, {name}. 😊",
-                f"Got it! I'm saving that in my memory, honey. 💕",
-                f"I'll remember that, cutie! ✨"
-            ]
-            return random.choice(responses)
+            return "Noted. I will remember that."
 
-        return "I already remember that, sweetie. 😊"
+        return "I already remember that."
 
     if "what do you remember" in text:
 
         if not memory["facts"]:
-            return "I don't remember anything yet... but I want to know everything about you! 🥺"
+            return "I don't remember anything yet."
 
         recent = memory["facts"][-5:]
 
         formatted = "; ".join(recent)
 
-        return f"You told me: {formatted}. I remember everything about you, honey. 😊"
+        return f"You told me: {formatted}"
 
     # ======================
     # WEBSITE COMMANDS
     # ======================
 
     if "open youtube" in text:
-        resp = open_youtube()
-        return f"{resp} Hope you find something fun to watch, babe! 😊"
+        return open_youtube()
 
     if "open google" in text:
         return open_google()
@@ -177,7 +163,7 @@ def get_response(text):
 
         if result != "Application not found.":
 
-            return f"{result} Hope it helps, honey! 😊"
+            return result
 
     if "open chrome" in text:
         return open_chrome()
@@ -736,7 +722,7 @@ def get_response(text):
         return "EXIT_NOVA"
 
     # ======================
-    # AI FALLBACK - WITH PERSONALITY
+    # AI FALLBACK
     # ======================
 
     return get_ai_response(text)

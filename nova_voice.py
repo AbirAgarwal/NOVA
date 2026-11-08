@@ -1,25 +1,25 @@
 """
-NOVA Voice System — Text-to-Speech with Female Voice
+NOVA Voice System - Text-to-Speech with female voice default
 """
 
 import pyttsx3
 
 
-def speak(text, voice_id=None):
-    """Speak text using a female voice if available."""
+def speak(text: str, voice_id=None):
+    """Speak text using female voice if available."""
     engine = pyttsx3.init()
 
     voices = engine.getProperty("voices")
 
-    # Select voice
     selected_voice = voice_id
+
     if selected_voice is None:
         # Try to find a female voice
         for v in voices:
             name = (v.name or "").lower()
             id_str = (v.id or "").lower()
-            if any(keyword in name or keyword in id_str
-                   for keyword in ["female", "zira", "hazel", "susan", "karen", "samantha"]):
+            if any(k in name or k in id_str
+                   for k in ["female", "zira", "hazel", "susan", "karen", "samantha", "heather", "jessica"]):
                 selected_voice = v.id
                 break
 
@@ -35,10 +35,7 @@ def speak(text, voice_id=None):
     else:
         engine.setProperty("voice", selected_voice)
 
-    # Set speech rate for more natural, conversational speed
-    engine.setProperty("rate", 165)  # Slightly slower than default for clarity
-
-    # Set volume to maximum
+    engine.setProperty("rate", 175)
     engine.setProperty("volume", 1.0)
 
     engine.say(text)
@@ -56,6 +53,8 @@ def get_available_voices():
             result.append({
                 "id": v.id,
                 "name": v.name or "Unknown",
-                "gender": "Female" if any(k in (v.name or "").lower() for k in ["female", "zira", "hazel", "susan", "karen", "samantha"]) else "Male/Other",
+                "gender": "Female" if any(k in (v.name or "").lower()
+                                          for k in ["female", "zira", "hazel", "susan", "karen", "samantha", "heather", "jessica"])
+                else "Male/Other",
             })
     return result

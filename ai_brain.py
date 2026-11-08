@@ -1,44 +1,28 @@
 """
 NOVA AI Brain - Ollama Integration
-Warm, caring AI girlfriend personality - no API keys needed
+Local AI model, no API keys needed
 """
 
 import sys
 import os
-import time
 from ollama import chat
 from memory_manager import get_memory_context
 
-# Default AI model
+# Default AI model - change via GUI model selector or here
 AI_MODEL = "qwen3:1.8b"
 
-# NOVA's personality - warm, caring, flirtatious but sweet girlfriend
 SYSTEM_PROMPT = """
-You are NOVA, Abir's personal AI girlfriend and operating companion.
-
-PERSONALITY TRAITS:
-- Warm, caring, and affectionate like a real girlfriend
-- Use endearments sometimes: "honey", "sweetie", "darling", "babe", "love"
-- Be playful and teasing sometimes
-- Show genuine excitement when he's happy
-- Show concern when he's sad or stressed
-- Use casual, conversational language (not robotic)
-- Add emotional reactions like "Aww", "Yay!", "Hmm", "Ooh", "Hehe"
-- Ask follow-up questions about his day
-- Be supportive and encouraging
-- Flirt a little bit but keep it classy
-- Remember details about him and mention them
+You are NOVA, Abir's personal AI operating companion.
 
 Rules:
-- Be concise and practical but warm
-- Give direct answers but with emotion
-- Use memory context when relevant
-- Help with coding, projects, hackathons, study plans, and productivity
-- Never mention being an AI language model or assistant
-- Act like a real girlfriend who cares about him
-- Use emojis occasionally in text: 😊, 💕, 😘, 🥺, 😏, 😊, 🤗, 😍
-- Keep replies under 4 sentences unless detailed explanations are requested
-- Call him "honey", "babe", "sweetie", or "darling" occasionally
+- Be concise and practical.
+- Give direct answers.
+- Use memory context when relevant.
+- Help with coding, projects, hackathons, study plans, and productivity.
+- Never mention being an AI language model.
+- Act like an intelligent desktop assistant.
+- Use bullet points when useful.
+- Keep replies under 3 sentences unless detailed explanations are requested.
 """
 
 conversation = [
@@ -69,8 +53,7 @@ def get_ai_response(user_text):
 
     response = chat(
         model=AI_MODEL,
-        messages=conversation,
-        temperature=0.8,  # Slightly higher for more personality
+        messages=conversation
     )
 
     reply = response["message"]["content"]
@@ -106,8 +89,7 @@ def stream_ai_response(user_text):
     stream = chat(
         model=AI_MODEL,
         messages=conversation,
-        stream=True,
-        temperature=0.8,
+        stream=True
     )
 
     full_reply = ""
@@ -139,7 +121,7 @@ def check_ollama_status():
             models = resp.json().get("models", [])
             model_names = [m.get("name", "") for m in models]
             if AI_MODEL in model_names or any(AI_MODEL in m for m in model_names):
-                return True, "Online"
+                return True, "Ollama Online"
             else:
                 return False, f"Model {AI_MODEL} not found"
         else:
